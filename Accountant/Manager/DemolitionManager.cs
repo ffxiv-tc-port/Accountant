@@ -123,7 +123,7 @@ public class DemolitionManager : IDisposable
         var plotInfo = new PlotInfo(InternalHousingZone.Mist, 1, 1, (ushort)Accountant.GameData.Worlds().First().Id);
         while (!CanAddPlot(plotInfo) && plotInfo.Valid())
             plotInfo = new PlotInfo(plotInfo.Zone, plotInfo.Ward, (ushort)(plotInfo.Plot + 1), plotInfo.ServerId);
-        var demo = new DemolitionInfo()
+        var demo = new DemolitionInfo
         {
             DisplayFrom        = 20,
             DisplayWarningFrom = 25,
@@ -251,25 +251,28 @@ public class DemolitionManager : IDisposable
     public static bool InsideHouse(ushort territory)
         => (HousingZone)territory switch
         {
-            HousingZone.CottageMist         => true,
-            HousingZone.CottageLavenderBeds => true,
-            HousingZone.CottageGoblet       => true,
-            HousingZone.CottageShirogane    => true,
-            HousingZone.CottageEmpyreum     => true,
-            HousingZone.CottageMinimalist   => true,
-            HousingZone.HouseMist           => true,
-            HousingZone.HouseLavenderBeds   => true,
-            HousingZone.HouseGoblet         => true,
-            HousingZone.HouseShirogane      => true,
-            HousingZone.HouseEmpyreum       => true,
-            HousingZone.HouseMinimalist     => true,
-            HousingZone.MansionMist         => true,
-            HousingZone.MansionLavenderBeds => true,
-            HousingZone.MansionGoblet       => true,
-            HousingZone.MansionShirogane    => true,
-            HousingZone.MansionEmpyreum     => true,
-            HousingZone.MansionMinimalist   => true,
-            _                               => false,
+            HousingZone.CottageMist           => true,
+            HousingZone.CottageLavenderBeds   => true,
+            HousingZone.CottageGoblet         => true,
+            HousingZone.CottageShirogane      => true,
+            HousingZone.CottageEmpyreum       => true,
+            HousingZone.CottageMinimalist     => true,
+            HousingZone.CottageDarkMinimalist => true,
+            HousingZone.HouseMist             => true,
+            HousingZone.HouseLavenderBeds     => true,
+            HousingZone.HouseGoblet           => true,
+            HousingZone.HouseShirogane        => true,
+            HousingZone.HouseEmpyreum         => true,
+            HousingZone.HouseMinimalist       => true,
+            HousingZone.HouseDarkMinimalist   => true,
+            HousingZone.MansionMist           => true,
+            HousingZone.MansionLavenderBeds   => true,
+            HousingZone.MansionGoblet         => true,
+            HousingZone.MansionShirogane      => true,
+            HousingZone.MansionEmpyreum       => true,
+            HousingZone.MansionMinimalist     => true,
+            HousingZone.MansionDarkMinimalist => true,
+            _                                 => false,
         };
 
 
