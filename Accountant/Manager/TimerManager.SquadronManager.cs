@@ -55,7 +55,7 @@ public partial class TimerManager
             => Disable();
 
         public TimerWindow.BaseCache CreateCache(TimerWindow window)
-            => throw new NotImplementedException();
+            => new TimerWindow.SquadronCache(window, RequiredFlags, _tasks);
 
         private void UpdateSquadron()
         {

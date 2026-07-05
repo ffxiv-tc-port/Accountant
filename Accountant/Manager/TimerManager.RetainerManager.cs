@@ -70,10 +70,15 @@ public partial class TimerManager
             var info         = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
             var count        = manager->GetRetainerCount();
             var changes      = false;
+            Dalamud.Log.Debug($"[Accountant] Retainer poll: player='{info.Name}', count={count}");
             for (byte i = 0; i < count; ++i)
             {
                 var data = new RetainerInfo(retainerList[i]);
-                changes |= _retainers.AddOrUpdateRetainer(info, data, i);
+                var changed = _retainers.AddOrUpdateRetainer(info, data, i);
+                if (changed)
+                    Dalamud.Log.Debug($"[Accountant] Retainer slot {i} updated: name='{data.Name}', ventureId={data.VentureId}, "
+                      + $"venture={data.Venture:O}, available={data.Available}");
+                changes |= changed;
             }
 
             for (var i = count; i < RetainerInfo.MaxSlots; ++i)

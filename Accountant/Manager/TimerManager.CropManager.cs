@@ -26,6 +26,11 @@ public partial class TimerManager
         private ushort _lastPatch = ushort.MaxValue;
         private ushort _lastBed   = ushort.MaxValue;
 
+        // Fertilizing can silently fail (crop already fully fertilized), which is only
+        // reported via a follow-up Talk message, so the timer update is deferred until
+        // we know whether that failure message appears.
+        private (CropSpotIdentification Id, uint ItemId)? _pendingFertilize;
+
         private readonly PlotCropTimers    _plotCrops;
         private readonly PrivateCropTimers _privateCrops;
 
@@ -73,8 +78,34 @@ public partial class TimerManager
         public void Dispose()
             => Disable();
 
+        private static bool IsFertilizeFailureMessage(SeString text)
+            => text.TextValue.Contains("已經施加了足夠的肥料了");
+
+        private void ApplyFertilize(CropSpotIdentification id, uint itemId)
+        {
+            switch (id.Type)
+            {
+                case CropSpotType.Apartment:
+                case CropSpotType.Chambers:
+                    _privateCrops.FertilizeCrop(id, itemId, DateTime.UtcNow);
+                    break;
+                case CropSpotType.Outdoors:
+                case CropSpotType.House:
+                    _plotCrops.FertilizeCrop(id, itemId, DateTime.UtcNow);
+                    break;
+            }
+        }
+
         private void CheckPlant(IntPtr talkPtr, SeString text, SeString speaker)
         {
+            if (_pendingFertilize.HasValue)
+            {
+                var pending = _pendingFertilize.Value;
+                _pendingFertilize = null;
+                if (!IsFertilizeFailureMessage(text))
+                    ApplyFertilize(pending.Id, pending.ItemId);
+            }
+
             if (!StringId.CropDoingWell.Match(text) && !StringId.CropBetterDays.Match(text))
                 return;
 
@@ -289,6 +320,18 @@ public partial class TimerManager
             }
         }
 
+        private void FertilizeCrop(SeString descriptionText)
+        {
+            SetPatch(descriptionText);
+            var id = IdentifyCropSpot();
+            if (id.Type == CropSpotType.Invalid)
+                return;
+
+            // Deferred: fertilizing can fail silently, only reported by a follow-up
+            // Talk message, so we do not know yet whether this actually took effect.
+            _pendingFertilize = (id, _gameData.FindCrop(_lastPlant).Item.RowId);
+        }
+
         private void SelectStringEventDetour(IntPtr unit, int which, SeString buttonText, SeString descriptionText)
         {
             Dalamud.Log.Debug($"[Accountant] SelectString which={which}, button='{buttonText.TextValue}', description='{descriptionText.TextValue}'");
@@ -321,17 +364,23 @@ public partial class TimerManager
                                 break;
                         }
                     }
-                    else if (StringId.TendCrop.Match(buttonText) || StringId.FertilizeCrop.Match(buttonText))
+                    else if (StringId.TendCrop.Match(buttonText))
                     {
                         TendCrop(descriptionText);
+                    }
+                    else if (StringId.FertilizeCrop.Match(buttonText))
+                    {
+                        FertilizeCrop(descriptionText);
                     }
 
                     return;
                 }
                 case 1:
                 {
-                    if (StringId.TendCrop.Match(buttonText) || StringId.FertilizeCrop.Match(buttonText))
+                    if (StringId.TendCrop.Match(buttonText))
                         TendCrop(descriptionText);
+                    else if (StringId.FertilizeCrop.Match(buttonText))
+                        FertilizeCrop(descriptionText);
                     return;
                 }
                 case 2:

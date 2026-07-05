@@ -78,7 +78,7 @@ public partial class TimerWindow
                 return;
 
             Update(now);
-            if (Headers.Count == 0)
+            if (Headers.Count == 0 && Objects.Count == 0)
                 return;
 
             using var id      = ImGuiRaii.PushId(Name);
@@ -104,6 +104,11 @@ public partial class TimerWindow
             if (!header)
                 return;
 
+            DrawBody(now);
+        }
+
+        protected virtual void DrawBody(DateTime now)
+        {
             foreach (var smallHeader in Headers)
                 smallHeader.Draw(this, now);
         }

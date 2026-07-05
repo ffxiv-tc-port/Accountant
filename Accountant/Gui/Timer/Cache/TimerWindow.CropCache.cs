@@ -72,12 +72,19 @@ public partial class TimerWindow
                     ImGui.Button(plantName, Vector2.UnitY * ImGui.GetFrameHeightWithSpacing() / 2 - Vector2.UnitX);
                 }
 
+                var showWilt   = wilt != DateTime.MaxValue;
+                var showWither = wither != DateTime.MaxValue;
+
                 ImGui.BeginGroup();
                 ImGui.Text(Loc.T("Planted:"));
                 ImGui.Text(Loc.T("Tended:"));
                 ImGui.Text(Loc.T("Finished:"));
-                ImGui.Text(Loc.T("Wilting:"));
-                ImGui.Text(Loc.T("Withering:"));
+                if (showWilt)
+                    ImGui.Text(Loc.T("Wilting:"));
+                if (showWither)
+                    ImGui.Text(Loc.T("Withering:"));
+                if (plant.FertilizeCount > 0)
+                    ImGui.Text(Loc.T("Fertilized:"));
                 if (plant.Position != Vector3.Zero)
                     ImGui.Text(Loc.T("Position:"));
                 ImGui.EndGroup();
@@ -100,8 +107,12 @@ public partial class TimerWindow
                 ImGui.Text(plantTimeString);
                 ImGui.Text(plant.LastTending.ToLocalTime().ToString(CultureInfo.CurrentCulture));
                 ImGui.Text(TimeSpanString2(fin, DateTime.UtcNow));
-                ImGui.Text(fin < wilt ? Loc.T("Never") : TimeSpanString2(wilt,     DateTime.UtcNow));
-                ImGui.Text(fin < wither ? Loc.T("Never") : TimeSpanString2(wither, DateTime.UtcNow));
+                if (showWilt)
+                    ImGui.Text(fin < wilt ? Loc.T("Never") : TimeSpanString2(wilt,     DateTime.UtcNow));
+                if (showWither)
+                    ImGui.Text(fin < wither ? Loc.T("Never") : TimeSpanString2(wither, DateTime.UtcNow));
+                if (plant.FertilizeCount > 0)
+                    ImGui.Text(string.Format(Loc.T("{0} times, -{1}"), plant.FertilizeCount, TimeSpanString(plant.FertilizeReduction, 3)));
                 if (plant.Position != Vector3.Zero)
                     ImGui.Text(FormattableString.Invariant($"({plant.Position.X:F1}, {plant.Position.Y:F1}, {plant.Position.Z:F1})"));
                 ImGui.EndGroup();

@@ -45,7 +45,10 @@ public partial class TimerWindow
                 using var _   = ImGuiRaii.DeferredEnd(ImGui.TreePop);
                 var       end = ObjectsBegin + ObjectsCount;
                 for (var i = ObjectsBegin; i < end; ++i)
+                {
+                    using var itemId = ImGuiRaii.PushId(i);
                     cache.Objects[i].Draw(now);
+                }
             }
         }
     }

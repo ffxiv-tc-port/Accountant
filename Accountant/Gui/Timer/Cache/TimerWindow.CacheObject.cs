@@ -32,7 +32,7 @@ public struct CacheObject
             ImGui.Image(icon.ImGuiHandle, Vector2.One * ImGui.GetTextLineHeight(), offset, size);
         }
 
-        ImGui.SameLine();
+        ImGui.SameLine(0, ImGui.GetStyle().ItemSpacing.X / 2);
     }
 
     public void Draw(DateTime now)
@@ -40,12 +40,10 @@ public struct CacheObject
         if (Accountant.Config.HideDisabled && Color == ColorId.DisabledText)
             return;
 
-        using var color   = ImGuiRaii.PushColor(ImGuiCol.Text, Color.Value());
-        using var spacing = ImGuiRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing / 2);
+        using var color = ImGuiRaii.PushColor(ImGuiCol.Text, Color.Value());
         DrawIcon();
-        ImGui.Selectable(Name);
+        ImGui.Selectable(Name, false, ImGuiSelectableFlags.None, new Vector2(0, ImGui.GetTextLineHeight()));
         var tooltip = ImGui.IsItemHovered();
-        spacing.Pop();
 
         if (DisplayString != null)
         {

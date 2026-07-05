@@ -37,6 +37,7 @@ public sealed partial class TimerManager : IDisposable
             new SubmersibleManager(SubmersibleTimers, AirshipTimers, CompanyStorage),
             new AirshipManager(AirshipTimers, SubmersibleTimers, CompanyStorage),
             new WheelManager(WheelTimers, CompanyStorage),
+            new SquadronManager(TaskTimers),
             new TaskManager(TaskTimers),
         ];
     }
