@@ -18,7 +18,7 @@ public partial class ConfigWindow
 
     private void DrawBlocklistsTab()
     {
-        if (!ImGui.BeginTabItem("Blocklist##AccountantTabs"))
+        if (!ImGui.BeginTabItem($"{Loc.T("Blocklist")}##AccountantTabs"))
             return;
 
         if (_newWorld == 0 && Dalamud.ClientState.LocalPlayer != null)
@@ -30,21 +30,21 @@ public partial class ConfigWindow
 
         raii.Push(ImGui.EndChild);
 
-        if (ImGui.CollapsingHeader("Blocked Crops"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Crops")))
             DrawBlockedCrops();
-        if (ImGui.CollapsingHeader("Blocked Plots"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Plots")))
             DrawBlockedPlots();
-        if (ImGui.CollapsingHeader("Blocked Players (Crops)"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Players (Crops)")))
             DrawBlockedPlayers("Crops", Accountant.Config.BlockedPlayersCrops, typeof(TimerWindow.CropCache));
-        if (ImGui.CollapsingHeader("Blocked Players (Retainers)"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Players (Retainers)")))
             DrawBlockedPlayers("Retainers", Accountant.Config.BlockedPlayersRetainers, typeof(TimerWindow.RetainerCache));
-        if (ImGui.CollapsingHeader("Blocked Players (Tasks)"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Players (Tasks)")))
             DrawBlockedPlayers("Tasks", Accountant.Config.BlockedPlayersTasks, typeof(TimerWindow.TaskCache));
-        if (ImGui.CollapsingHeader("Blocked Free Companies (Airships)"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Free Companies (Airships)")))
             DrawBlockedCompanies("Airships", Accountant.Config.BlockedCompaniesAirships, typeof(TimerWindow.MachineCache));
-        if (ImGui.CollapsingHeader("Blocked Free Companies (Submersibles)"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Free Companies (Submersibles)")))
             DrawBlockedCompanies("Submersibles", Accountant.Config.BlockedCompaniesSubmersibles, typeof(TimerWindow.MachineCache));
-        if (ImGui.CollapsingHeader("Blocked Free Companies (Aetherial Wheels)"))
+        if (ImGui.CollapsingHeader(Loc.T("Blocked Free Companies (Aetherial Wheels)")))
             DrawBlockedCompanies("Wheels", Accountant.Config.BlockedCompaniesWheels, typeof(TimerWindow.WheelCache));
     }
 
@@ -57,7 +57,7 @@ public partial class ConfigWindow
             return;
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTable);
         ImGui.TableSetupColumn(string.Empty, ImGuiTableColumnFlags.WidthFixed, ImGui.GetStyle().FrameBorderSize);
-        ImGui.TableSetupColumn("Plant Name");
+        ImGui.TableSetupColumn(Loc.T("Plant Name"));
         ImGui.TableHeadersRow();
 
         uint? change = null;
@@ -106,7 +106,7 @@ public partial class ConfigWindow
 
         ImGui.TableNextColumn();
         using var color = ImGuiRaii.PushColor(ImGuiCol.FrameBg, newPlant.GrowTime > 0 ? 0x2040FF40u : 0x204040FFu);
-        ImGui.InputTextWithHint("##AddPlant", "Plant Name...", ref _newBlockedCrop, 64);
+        ImGui.InputTextWithHint("##AddPlant", Loc.T("Plant Name..."), ref _newBlockedCrop, 64);
     }
 
     private void DrawBlockedPlots()
@@ -163,8 +163,8 @@ public partial class ConfigWindow
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTable);
         ImGui.TableSetupColumn(string.Empty,  ImGuiTableColumnFlags.WidthFixed, ImGui.GetStyle().FrameBorderSize);
-        ImGui.TableSetupColumn("World",       ImGuiTableColumnFlags.WidthFixed, 125 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Player Name", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn(Loc.T("World"),       ImGuiTableColumnFlags.WidthFixed, 125 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Player Name"), ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableHeadersRow();
         ImGui.TableSetupScrollFreeze(0, 1);
 
@@ -207,7 +207,7 @@ public partial class ConfigWindow
         DrawWorldsCombo(ref _newWorld);
         ImGui.TableNextColumn();
         ImGui.SetNextItemWidth(-1);
-        ImGui.InputTextWithHint("##NewPlayer", "New Player Name...", ref _newBlockedPlayerName, 32);
+        ImGui.InputTextWithHint("##NewPlayer", Loc.T("New Player Name..."), ref _newBlockedPlayerName, 32);
         ImGui.NewLine();
     }
 
@@ -219,8 +219,8 @@ public partial class ConfigWindow
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTable);
         ImGui.TableSetupColumn(string.Empty,        ImGuiTableColumnFlags.WidthFixed, ImGui.GetStyle().FrameBorderSize);
-        ImGui.TableSetupColumn("World",             ImGuiTableColumnFlags.WidthFixed, 125 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Free Company Name", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn(Loc.T("World"),             ImGuiTableColumnFlags.WidthFixed, 125 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Free Company Name"), ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableHeadersRow();
         ImGui.TableSetupScrollFreeze(0, 1);
 
@@ -262,7 +262,7 @@ public partial class ConfigWindow
         DrawWorldsCombo(ref _newWorld);
         ImGui.TableNextColumn();
         ImGui.SetNextItemWidth(-1);
-        ImGui.InputTextWithHint("##NewCompany", "New Free Company Name...", ref _newBlockedCompanyName, 32);
+        ImGui.InputTextWithHint("##NewCompany", Loc.T("New Free Company Name..."), ref _newBlockedCompanyName, 32);
         ImGui.NewLine();
     }
 }

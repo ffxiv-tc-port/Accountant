@@ -30,7 +30,7 @@ public readonly struct PlayerInfo(string name, ushort serverId) : IEquatable<Pla
         => (uint)Helpers.CombineHashCodes(Helpers.GetStableHashCode(Name), ServerId);
 
     public bool Valid()
-        => Name.Length > 0 && Name.Contains(' ') && Accountant.GameData.IsValidWorldId(ServerId);
+        => Name.Length > 0 && Accountant.GameData.IsValidWorldId(ServerId);
 
     [JsonIgnore]
     public string CastedName

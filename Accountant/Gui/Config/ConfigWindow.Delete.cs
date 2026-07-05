@@ -18,7 +18,7 @@ public partial class ConfigWindow
             var draw     = ImGui.TreeNodeEx(plotName);
             if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && ImGui.GetIO().KeyCtrl && ImGui.GetIO().KeyShift)
                 deleteInfo = plot;
-            ImGuiRaii.HoverTooltip("Hold Control, Shift and right-click to delete.");
+            ImGuiRaii.HoverTooltip(Loc.T("Hold Control, Shift and right-click to delete."));
 
             if (!draw)
                 continue;
@@ -31,7 +31,7 @@ public partial class ConfigWindow
                 ImGui.Selectable($"{idx + 1:D2} - {bedName}: {plantName}");
                 if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && ImGui.GetIO().KeyShift)
                     deleteIdx = idx;
-                ImGuiRaii.HoverTooltip("Hold Shift and right-click to delete.");
+                ImGuiRaii.HoverTooltip(Loc.T("Hold Shift and right-click to delete."));
             }
 
             ImGui.TreePop();
@@ -59,7 +59,7 @@ public partial class ConfigWindow
             var draw       = ImGui.TreeNodeEx(playerName);
             if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && ImGui.GetIO().KeyCtrl && ImGui.GetIO().KeyShift)
                 deleteInfo = player;
-            ImGuiRaii.HoverTooltip("Hold Control, Shift and right-click to delete.");
+            ImGuiRaii.HoverTooltip(Loc.T("Hold Control, Shift and right-click to delete."));
 
             if (!draw)
                 continue;
@@ -72,7 +72,7 @@ public partial class ConfigWindow
                 ImGui.Selectable($"{idx + 1:D2} - {bedName}: {plantName}");
                 if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && ImGui.GetIO().KeyShift)
                     deleteIdx = idx;
-                ImGuiRaii.HoverTooltip("Hold Shift and right-click to delete.");
+                ImGuiRaii.HoverTooltip(Loc.T("Hold Shift and right-click to delete."));
             }
 
             ImGui.TreePop();
@@ -101,7 +101,7 @@ public partial class ConfigWindow
             ImGui.Selectable(playerName);
             if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && ImGui.GetIO().KeyCtrl && ImGui.GetIO().KeyShift)
                 deleteInfo = player;
-            ImGuiRaii.HoverTooltip("Hold Control, Shift and right-click to delete.");
+            ImGuiRaii.HoverTooltip(Loc.T("Hold Control, Shift and right-click to delete."));
         }
 
         if (deleteInfo == null)
@@ -134,7 +134,7 @@ public partial class ConfigWindow
             ImGui.Selectable(companyName);
             if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && ImGui.GetIO().KeyCtrl && ImGui.GetIO().KeyShift)
                 deleteInfo = company;
-            ImGuiRaii.HoverTooltip("Hold Control, Shift and right-click to delete.");
+            ImGuiRaii.HoverTooltip(Loc.T("Hold Control, Shift and right-click to delete."));
         }
 
         if (deleteInfo == null)
@@ -166,7 +166,7 @@ public partial class ConfigWindow
 
     private void DrawDeleteTab()
     {
-        if (!ImGui.BeginTabItem("Delete Entries##AccountantTabs"))
+        if (!ImGui.BeginTabItem($"{Loc.T("Delete Entries")}##AccountantTabs"))
             return;
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTabItem);
@@ -176,25 +176,25 @@ public partial class ConfigWindow
 
         raii.Push(ImGui.EndChild);
         using var id = ImGuiRaii.PushId("Deletion");
-        if (ImGui.CollapsingHeader("Crop Entries"))
+        if (ImGui.CollapsingHeader(Loc.T("Crop Entries")))
         {
             DrawDeletePlotCrops();
             DrawDeletePrivateCrops();
         }
 
-        if (ImGui.CollapsingHeader("Retainer Entries"))
+        if (ImGui.CollapsingHeader(Loc.T("Retainer Entries")))
             DrawDeleteRetainerEntries();
 
-        if (ImGui.CollapsingHeader("Task Entries"))
+        if (ImGui.CollapsingHeader(Loc.T("Task Entries")))
             DrawDeleteTaskEntries();
 
-        if (ImGui.CollapsingHeader("Airship Entries"))
+        if (ImGui.CollapsingHeader(Loc.T("Airship Entries")))
             DrawDeleteAirshipEntries();
 
-        if (ImGui.CollapsingHeader("Submersible Entries"))
+        if (ImGui.CollapsingHeader(Loc.T("Submersible Entries")))
             DrawDeleteSubmersibleEntries();
 
-        if (ImGui.CollapsingHeader("Wheel Entries"))
+        if (ImGui.CollapsingHeader(Loc.T("Wheel Entries")))
             DrawDeleteWheelEntries();
     }
 }

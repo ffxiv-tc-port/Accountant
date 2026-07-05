@@ -18,7 +18,7 @@ public partial class TimerWindow
         private readonly TaskTimers _tasks;
 
         public TaskCache(TimerWindow window, ConfigFlags required, TaskTimers tasks)
-            : base("Tasks", required, window)
+            : base(Loc.T("Tasks"), required, window)
         {
             _tasks         =  tasks;
             _tasks.Changed += Resetter;
@@ -38,20 +38,20 @@ public partial class TimerWindow
 
         private static Action GenerateTooltip(Squadron info)
         {
-            var missionName  = info.MissionName() ?? "Squadron Mission";
-            var trainingName = info.TrainingName() ?? "Squadron Training";
+            var missionName  = info.MissionName() ?? Loc.T("Squadron Mission");
+            var trainingName = info.TrainingName() ?? Loc.T("Squadron Training");
             return () =>
             {
                 ImGui.BeginTooltip();
                 var now = DateTime.UtcNow;
                 ImGui.BeginGroup();
-                ImGui.Text("New Recruits");
+                ImGui.Text(Loc.T("New Recruits"));
                 ImGui.Text(missionName);
                 ImGui.Text(trainingName);
                 ImGui.EndGroup();
                 ImGui.SameLine();
                 ImGui.BeginGroup();
-                ImGui.Text(info.NewRecruits ? StringId.Available.Value() : "None");
+                ImGui.Text(info.NewRecruits ? StringId.Available.Value() : Loc.T("None"));
                 if (info.MissionEnd == DateTime.MinValue)
                     ImGui.Text(StringId.Available.Value());
                 else if (info.MissionEnd < now)
@@ -187,7 +187,7 @@ public partial class TimerWindow
             }
             else if (nextReset < Now && !jumbo.IsEmpty())
             {
-                ret.DisplayString = "Redeemable";
+                ret.DisplayString = Loc.T("Redeemable");
                 ret.Color         = ColorId.TextObjectsHome;
             }
             else if (jumbo.IsFull())
@@ -262,7 +262,7 @@ public partial class TimerWindow
                 leveSum   += leves;
             }
 
-            ret.Name = $"Leve Allowances ({leveSum})###LeveAllowances";
+            ret.Name = $"{Loc.T("Leve Allowances")} ({leveSum})###LeveAllowances";
             return ret;
         }
 
@@ -270,7 +270,7 @@ public partial class TimerWindow
         {
             var ret = new SmallHeader
             {
-                Name         = "Squadrons",
+                Name         = Loc.T("Squadrons"),
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = data.Count,
                 DisplayTime  = DateTime.MaxValue,
@@ -296,7 +296,7 @@ public partial class TimerWindow
         {
             var ret = new SmallHeader
             {
-                Name         = "Map Allowance",
+                Name         = Loc.T("Map Allowance"),
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = data.Count,
                 DisplayTime  = DateTime.MaxValue,
@@ -321,7 +321,7 @@ public partial class TimerWindow
         {
             var ret = new SmallHeader
             {
-                Name         = "Mini Cactpot",
+                Name         = Loc.T("Mini Cactpot"),
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = data.Count,
                 DisplayTime  = DateTime.MaxValue,
@@ -351,7 +351,7 @@ public partial class TimerWindow
         {
             var ret = new SmallHeader
             {
-                Name         = "Jumbo Cactpot",
+                Name         = Loc.T("Jumbo Cactpot"),
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = data.Count,
                 DisplayTime  = DateTime.MaxValue,
@@ -377,7 +377,7 @@ public partial class TimerWindow
         {
             var ret = new SmallHeader
             {
-                Name         = "Custom Deliveries",
+                Name         = Loc.T("Custom Deliveries"),
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = data.Count,
                 DisplayTime  = DateTime.MaxValue,
@@ -403,7 +403,7 @@ public partial class TimerWindow
         {
             var ret = new SmallHeader
             {
-                Name         = "Tribal Quests",
+                Name         = Loc.T("Tribal Quests"),
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = data.Count,
                 DisplayTime  = DateTime.MaxValue,

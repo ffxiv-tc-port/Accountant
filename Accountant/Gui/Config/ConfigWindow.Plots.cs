@@ -16,7 +16,7 @@ public partial class ConfigWindow
 {
     private void DrawDemolitionTab()
     {
-        if (!ImGui.BeginTabItem("Demolition Tracker##AccountantTabs"))
+        if (!ImGui.BeginTabItem($"{Loc.T("Demolition Tracker")}##AccountantTabs"))
             return;
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTabItem);
@@ -48,21 +48,21 @@ public partial class ConfigWindow
             return;
         }
 
-        ImGui.InputTextWithHint("Custom Name", "Leave blank for default...", ref data.Name, 128);
+        ImGui.InputTextWithHint(Loc.T("Custom Name"), Loc.T("Leave blank for default..."), ref data.Name, 128);
         if (ImGui.IsItemDeactivatedAfterEdit())
         {
             _timerWindow.ResetCache();
             _demoManager.Save();
         }
 
-        if (ImGui.Checkbox("Tracked", ref data.Tracked))
+        if (ImGui.Checkbox(Loc.T("Tracked"), ref data.Tracked))
             _demoManager.Save();
         ImGui.SameLine();
-        ImGuiComponents.HelpMarker(
-            "The name entered here will replace all occurrences of the plot in the timer window.\n\nThe timer limit will show this house as due to be demolished in the timer window when the configured number of days passed since your last visit.\n\nThe warning timer limit will show notifications on the bottom right when the configured number of days passed since your last visit.\n\nYou need to manually add players that reset the timer when encountered within the house, otherwise the timer will not update.");
+        ImGuiComponents.HelpMarker(Loc.T(
+            "The name entered here will replace all occurrences of the plot in the timer window.\n\nThe timer limit will show this house as due to be demolished in the timer window when the configured number of days passed since your last visit.\n\nThe warning timer limit will show notifications on the bottom right when the configured number of days passed since your last visit.\n\nYou need to manually add players that reset the timer when encountered within the house, otherwise the timer will not update."));
 
         var tmpDays = (int)data.DisplayFrom;
-        if (ImGui.DragInt("Show in Timers", ref tmpDays, 0.1f, 0, DemolitionManager.DefaultDisplayMax, "%i Days Since Visit"))
+        if (ImGui.DragInt(Loc.T("Show in Timers"), ref tmpDays, 0.1f, 0, DemolitionManager.DefaultDisplayMax, Loc.T("%i Days Since Visit")))
         {
             tmpDays = Math.Clamp(tmpDays, 0, DemolitionManager.DefaultDisplayMax);
             if (tmpDays != data.DisplayFrom)
@@ -73,7 +73,7 @@ public partial class ConfigWindow
         }
 
         tmpDays = data.DisplayWarningFrom;
-        if (ImGui.DragInt("Show Warnings", ref tmpDays, 0.1f, 0, DemolitionManager.DefaultDisplayMax, "%i Days Since Visit"))
+        if (ImGui.DragInt(Loc.T("Show Warnings"), ref tmpDays, 0.1f, 0, DemolitionManager.DefaultDisplayMax, Loc.T("%i Days Since Visit")))
         {
             tmpDays = Math.Clamp(tmpDays, 0, DemolitionManager.DefaultDisplayMax);
             if (tmpDays != data.DisplayWarningFrom)
@@ -86,9 +86,9 @@ public partial class ConfigWindow
         var ctrl = ImGui.GetIO().KeyCtrl;
         var text = data.LastVisitDays switch
         {
-            <= 1                                  => "Last Visit: Less than a day ago",
-            > DemolitionManager.DefaultDisplayMax => $"Last Visit: More than {DemolitionManager.DefaultDisplayMax} days ago",
-            _                                     => $"Last Visit: {data.LastVisitDays} days ago",
+            <= 1                                  => Loc.T("Last Visit: Less than a day ago"),
+            > DemolitionManager.DefaultDisplayMax => string.Format(Loc.T("Last Visit: More than {0} days ago"), DemolitionManager.DefaultDisplayMax),
+            _                                     => string.Format(Loc.T("Last Visit: {0} days ago"), data.LastVisitDays),
         };
         using (ImRaii.Disabled(!ctrl))
         {
@@ -100,9 +100,9 @@ public partial class ConfigWindow
         }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Hold Control and click this button to force the last visit to now.");
+            ImGui.SetTooltip(Loc.T("Hold Control and click this button to force the last visit to now."));
 
-        ImGui.InputTextWithHint("##PlayerName", "New Player Name...", ref _newPlayerName, 40);
+        ImGui.InputTextWithHint("##PlayerName", Loc.T("New Player Name..."), ref _newPlayerName, 40);
         ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
         if (_newWorldId == 0 && Dalamud.ClientState.LocalPlayer is not null)
             _newWorldId = (ushort)Dalamud.ClientState.LocalPlayer.HomeWorld.RowId;
@@ -113,7 +113,7 @@ public partial class ConfigWindow
                 || _newWorldId == 0
                 || data.CheckedPlayers.Contains(new PlayerInfo(_newPlayerName, _newWorldId))))
         {
-            if (ImGui.Button("Add New Player"))
+            if (ImGui.Button(Loc.T("Add New Player")))
             {
                 data.CheckedPlayers.Add(new PlayerInfo(_newPlayerName, _newWorldId));
                 _demoManager.Save();
@@ -121,14 +121,14 @@ public partial class ConfigWindow
         }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Add the player from the inputs if it is valid and not already added.");
+            ImGui.SetTooltip(Loc.T("Add the player from the inputs if it is valid and not already added."));
 
         ImGui.SameLine();
 
         using (ImRaii.Disabled(Dalamud.ClientState.LocalPlayer == null
                 || data.CheckedPlayers.Contains(new PlayerInfo(Dalamud.ClientState.LocalPlayer))))
         {
-            if (ImGui.Button("Add Current Player"))
+            if (ImGui.Button(Loc.T("Add Current Player")))
             {
                 data.CheckedPlayers.Add(new PlayerInfo(Dalamud.ClientState.LocalPlayer!));
                 _demoManager.Save();
@@ -136,7 +136,7 @@ public partial class ConfigWindow
         }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Add your current character.");
+            ImGui.SetTooltip(Loc.T("Add your current character."));
 
         if (ImGui.BeginListBox("##list", ImGui.GetContentRegionAvail()))
         {
@@ -156,7 +156,7 @@ public partial class ConfigWindow
                 }
 
                 if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Remove this character from tracking.");
+                    ImGui.SetTooltip(Loc.T("Remove this character from tracking."));
 
                 ImGui.SameLine();
                 ImGui.AlignTextToFramePadding();
@@ -201,11 +201,11 @@ public partial class ConfigWindow
         ImGui.TableNextColumn();
         var canAdd = _demoManager.CanAddPlot(newPlot);
         var tt = canAdd
-            ? "Add the plot configured in the inputs."
-            : "The plot configured in the inputs was already added.";
+            ? Loc.T("Add the plot configured in the inputs.")
+            : Loc.T("The plot configured in the inputs was already added.");
         using (ImRaii.Disabled(!canAdd))
         {
-            if (ImGui.Button("Add Plot"))
+            if (ImGui.Button(Loc.T("Add Plot")))
                 _demoManager.AddPlot(newPlot);
         }
 
@@ -214,15 +214,18 @@ public partial class ConfigWindow
 
         ImGui.SameLine();
         var currentPlot = _demoManager.CurrentPlot;
+        var canAddCurrent = currentPlot.Valid() && _demoManager.CanAddPlot(currentPlot);
         tt = (currentPlot.Valid(), _demoManager.CanAddPlot(currentPlot)) switch
         {
-            (true, true)  => $"Add the plot {currentPlot.ToName()} on {Accountant.GameData.GetWorldName(currentPlot.ServerId)}.",
-            (false, _)    => "You are not on an identifiable plot.",
-            (true, false) => $"The plot {currentPlot.ToName()} on {Accountant.GameData.GetWorldName(currentPlot.ServerId)} was already added",
+            (true, true) => string.Format(Loc.T("Add the plot {0} on {1}."), currentPlot.ToName(),
+                Accountant.GameData.GetWorldName(currentPlot.ServerId)),
+            (false, _) => Loc.T("You are not on an identifiable plot."),
+            (true, false) => string.Format(Loc.T("The plot {0} on {1} was already added"), currentPlot.ToName(),
+                Accountant.GameData.GetWorldName(currentPlot.ServerId)),
         };
-        using (ImRaii.Disabled(tt[0] != 'A'))
+        using (ImRaii.Disabled(!canAddCurrent))
         {
-            if (ImGui.Button("Add Current Plot"))
+            if (ImGui.Button(Loc.T("Add Current Plot")))
             {
                 var plot = _demoManager.CurrentPlot;
                 if (plot.Valid())
@@ -234,16 +237,17 @@ public partial class ConfigWindow
             ImGui.SetTooltip(tt);
 
         ImGui.SameLine();
+        var canDelete = ImGui.GetIO().KeyCtrl && _demoManager.Data.ContainsKey(_selectedPlot);
         tt = (ImGui.GetIO().KeyCtrl, _demoManager.Data.ContainsKey(_selectedPlot)) switch
         {
-            (true, true)   => "Delete the selected plot.",
-            (true, false)  => "Select a plot to delete.",
-            (false, false) => "Select a plot and hold Control to delete.",
-            (false, true)  => "Hold Control to delete the selected plot.",
+            (true, true)   => Loc.T("Delete the selected plot."),
+            (true, false)  => Loc.T("Select a plot to delete."),
+            (false, false) => Loc.T("Select a plot and hold Control to delete."),
+            (false, true)  => Loc.T("Hold Control to delete the selected plot."),
         };
-        using (ImRaii.Disabled(tt[0] != 'D'))
+        using (ImRaii.Disabled(!canDelete))
         {
-            if (ImGui.Button("Delete Selected Plot") && _demoManager.Data.Remove(_selectedPlot))
+            if (ImGui.Button(Loc.T("Delete Selected Plot")) && _demoManager.Data.Remove(_selectedPlot))
                 _demoManager.Save();
         }
 

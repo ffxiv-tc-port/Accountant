@@ -17,7 +17,7 @@ public partial class TimerWindow
         private readonly PrivateCropTimers _privateCrops;
 
         public CropCache(TimerWindow window, ConfigFlags requiredFlags, PlotCropTimers plotCrops, PrivateCropTimers privateCrops)
-            : base("Crops", requiredFlags, window)
+            : base(Loc.T("Crops"), requiredFlags, window)
         {
             _plotCrops            =  plotCrops;
             _privateCrops         =  privateCrops;
@@ -30,12 +30,12 @@ public partial class TimerWindow
             if (Accountant.Config.ShowCropTooltip)
             {
                 ImGui.BeginTooltip();
-                ImGui.TextUnformatted("Outdoor crops only refresh every 63 minutes on a ward-specific update timer.\n"
+                ImGui.TextUnformatted(Loc.T("Outdoor crops only refresh every 63 minutes on a ward-specific update timer.\n"
                   + "Any timer may be delayed by up to 63 minutes.\n"
                   + "Fertilizing a plant during these delays will automatically trigger updates.\n"
                   + "They will still grow out/wilt/wither in order, and grown-out plants do not wither anymore.\n"
                   + "Indoors, clearing the house and re-entering should automatically trigger updates.\n"
-                  + "You can disable this tooltip in the configuration.");
+                  + "You can disable this tooltip in the configuration."));
                 ImGui.EndTooltip();
             }
         }
@@ -43,13 +43,13 @@ public partial class TimerWindow
         private static string TimeSpanString2(DateTime target, DateTime now)
         {
             if (target == DateTime.MinValue)
-                return "Already";
+                return Loc.T("Already");
             if (target == DateTime.UnixEpoch)
-                return "Unknown";
+                return Loc.T("Unknown");
             if (target == DateTime.MaxValue)
-                return "Never";
+                return Loc.T("Never");
 
-            return target < now ? "Already" : TimeSpanString(target - now, 3);
+            return target < now ? Loc.T("Already") : TimeSpanString(target - now, 3);
         }
 
         private static Action GenerateTooltip(PlantInfo plant, CacheObject ret, string plantName, DateTime fin, DateTime wilt, DateTime wither)
@@ -73,13 +73,13 @@ public partial class TimerWindow
                 }
 
                 ImGui.BeginGroup();
-                ImGui.Text("Planted:");
-                ImGui.Text("Tended:");
-                ImGui.Text("Finished:");
-                ImGui.Text("Wilting:");
-                ImGui.Text("Withering:");
+                ImGui.Text(Loc.T("Planted:"));
+                ImGui.Text(Loc.T("Tended:"));
+                ImGui.Text(Loc.T("Finished:"));
+                ImGui.Text(Loc.T("Wilting:"));
+                ImGui.Text(Loc.T("Withering:"));
                 if (plant.Position != Vector3.Zero)
-                    ImGui.Text("Position:");
+                    ImGui.Text(Loc.T("Position:"));
                 ImGui.EndGroup();
                 ImGui.SameLine();
                 if (!plant.AccuratePlantTime)
@@ -100,8 +100,8 @@ public partial class TimerWindow
                 ImGui.Text(plantTimeString);
                 ImGui.Text(plant.LastTending.ToLocalTime().ToString(CultureInfo.CurrentCulture));
                 ImGui.Text(TimeSpanString2(fin, DateTime.UtcNow));
-                ImGui.Text(fin < wilt ? "Never" : TimeSpanString2(wilt,     DateTime.UtcNow));
-                ImGui.Text(fin < wither ? "Never" : TimeSpanString2(wither, DateTime.UtcNow));
+                ImGui.Text(fin < wilt ? Loc.T("Never") : TimeSpanString2(wilt,     DateTime.UtcNow));
+                ImGui.Text(fin < wither ? Loc.T("Never") : TimeSpanString2(wither, DateTime.UtcNow));
                 if (plant.Position != Vector3.Zero)
                     ImGui.Text(FormattableString.Invariant($"({plant.Position.X:F1}, {plant.Position.Y:F1}, {plant.Position.Z:F1})"));
                 ImGui.EndGroup();

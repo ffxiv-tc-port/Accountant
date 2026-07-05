@@ -120,9 +120,9 @@ public partial class ConfigWindow
 
     private static void SetupPlotHeaders()
     {
-        ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Zone",  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Ward",  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Plot",  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("World"), ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Zone"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Ward"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Plot"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
     }
 }

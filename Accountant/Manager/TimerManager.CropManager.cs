@@ -208,6 +208,7 @@ public partial class TimerManager
 
         private void SelectYesnoEventDetour(IntPtr atkUnit, bool yesOrNo, SeString buttonText, SeString descriptionText)
         {
+            Dalamud.Log.Debug($"[Accountant] SelectYesno yesOrNo={yesOrNo}, button='{buttonText.TextValue}', description='{descriptionText.TextValue}'");
             CropData GetCropData(string text)
             {
                 var ret = StringId.SeedMatcher.Filter(text);
@@ -290,6 +291,7 @@ public partial class TimerManager
 
         private void SelectStringEventDetour(IntPtr unit, int which, SeString buttonText, SeString descriptionText)
         {
+            Dalamud.Log.Debug($"[Accountant] SelectString which={which}, button='{buttonText.TextValue}', description='{descriptionText.TextValue}'");
             switch (which)
             {
                 case 0:
@@ -319,7 +321,7 @@ public partial class TimerManager
                                 break;
                         }
                     }
-                    else if (StringId.TendCrop.Match(buttonText))
+                    else if (StringId.TendCrop.Match(buttonText) || StringId.FertilizeCrop.Match(buttonText))
                     {
                         TendCrop(descriptionText);
                     }
@@ -328,7 +330,7 @@ public partial class TimerManager
                 }
                 case 1:
                 {
-                    if (StringId.TendCrop.Match(buttonText))
+                    if (StringId.TendCrop.Match(buttonText) || StringId.FertilizeCrop.Match(buttonText))
                         TendCrop(descriptionText);
                     return;
                 }
