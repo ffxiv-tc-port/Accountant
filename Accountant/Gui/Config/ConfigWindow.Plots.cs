@@ -176,7 +176,7 @@ public partial class ConfigWindow
 
         using var table = ImGuiRaii.DeferredEnd(ImGui.EndTable);
 
-        SetupPlotHeaders();
+        SetupPlotHeadersWithName();
         ImGui.TableHeadersRow();
         ImGui.TableSetupScrollFreeze(0, 1);
 

@@ -80,8 +80,14 @@ public partial class TimerManager
         public void Dispose()
             => Disable();
 
+        private static bool IsAlreadyFertilizedMessage(SeString text)
+            => text.TextValue.Contains("已經施加了足夠的肥料了");
+
+        private static bool IsOutOfFertilizerMessage(SeString text)
+            => text.TextValue.Contains("沒有肥料");
+
         private static bool IsFertilizeFailureMessage(SeString text)
-            => text.TextValue.Contains("已經施加了足夠的肥料了") || text.TextValue.Contains("沒有肥料");
+            => IsAlreadyFertilizedMessage(text) || IsOutOfFertilizerMessage(text);
 
         private static bool IsFertilizeSuccessMessage(SeString text)
             => text.TextValue.Contains("施加了肥料");
@@ -122,6 +128,30 @@ public partial class TimerManager
             }
         }
 
+        private void MarkAlreadyFertilized(CropSpotIdentification id)
+        {
+            switch (id.Type)
+            {
+                case CropSpotType.Apartment:
+                case CropSpotType.Chambers:
+                    _privateCrops.MarkAlreadyFertilized(id, DateTime.UtcNow);
+                    break;
+                case CropSpotType.Outdoors:
+                case CropSpotType.House:
+                    _plotCrops.MarkAlreadyFertilized(id, DateTime.UtcNow);
+                    break;
+            }
+        }
+
+        private void HandleFertilizeFailure(SeString text, CropSpotIdentification id, uint itemId)
+        {
+            IdentifyOnly(id, itemId);
+            // "Already fully fertilized" confirms the crop is currently up to date - unlike
+            // "out of fertilizer", which says nothing about the crop itself.
+            if (IsAlreadyFertilizedMessage(text))
+                MarkAlreadyFertilized(id);
+        }
+
         // Flower pot fertilize outcomes (unlike outdoor garden bed ones) are not shown via the
         // Talk addon at all - only in the chat log - so they need their own separate listener.
         private void OnChatMessage(global::Dalamud.Game.Text.XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
@@ -133,7 +163,7 @@ public partial class TimerManager
             {
                 var pending = _pendingFertilize.Value;
                 _pendingFertilize = null;
-                IdentifyOnly(pending.Id, pending.ItemId);
+                HandleFertilizeFailure(message, pending.Id, pending.ItemId);
             }
             else if (IsFertilizeSuccessMessage(message))
             {
@@ -153,7 +183,7 @@ public partial class TimerManager
                     // don't count it, but still register the crop's identity if it wasn't tracked yet.
                     var pending = _pendingFertilize.Value;
                     _pendingFertilize = null;
-                    IdentifyOnly(pending.Id, pending.ItemId);
+                    HandleFertilizeFailure(text, pending.Id, pending.ItemId);
                 }
                 else if (IsFertilizeSuccessMessage(text))
                 {

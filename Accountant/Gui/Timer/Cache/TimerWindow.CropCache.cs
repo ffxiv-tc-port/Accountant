@@ -13,6 +13,9 @@ public partial class TimerWindow
 {
     internal sealed partial class CropCache : BaseCache
     {
+        // Prefix marking a crop that has not been (successfully) fertilized in over an hour.
+        private const string FertilizeReminderMark = "X";
+
         private readonly PlotCropTimers    _plotCrops;
         private readonly PrivateCropTimers _privateCrops;
 
@@ -126,6 +129,9 @@ public partial class TimerWindow
                 UpdateByCrop();
             else
                 UpdateByOwner();
+
+            if (Headers.Exists(h => h.Name.StartsWith(FertilizeReminderMark + " ", StringComparison.Ordinal)))
+                DisplayNameOverride = $"{FertilizeReminderMark} {Name}";
         }
     }
 }

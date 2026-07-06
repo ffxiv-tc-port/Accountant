@@ -24,6 +24,10 @@ public partial class TimerWindow
         private readonly ConfigFlags _requiredFlags;
         public readonly  string      Name;
 
+        // Optional display-only override for the top-level header label (e.g. a status marker
+        // prefix) - Name itself stays stable since it's also used for the ImGui ID and lookups.
+        protected string? DisplayNameOverride;
+
         protected BaseCache(string name, ConfigFlags requiredFlags, TimerWindow window)
         {
             Name           = name;
@@ -53,9 +57,10 @@ public partial class TimerWindow
             if (now <= _nextChange)
                 return;
 
-            Now         = now;
-            Color       = ColorId.NeutralHeader;
-            _nextChange = DateTime.MaxValue;
+            Now                  = now;
+            Color                = ColorId.NeutralHeader;
+            _nextChange          = DateTime.MaxValue;
+            DisplayNameOverride  = null;
             _seenNames.Clear();
             Objects.Clear();
             Headers.Clear();
@@ -84,7 +89,7 @@ public partial class TimerWindow
             using var id      = ImGuiRaii.PushId(Name);
             using var c       = ImGuiRaii.PushColor(ImGuiCol.Header, Color.Value());
             var       posY    = ImGui.GetCursorPosY();
-            var       header  = ImGui.CollapsingHeader(Name);
+            var       header  = ImGui.CollapsingHeader(DisplayNameOverride ?? Name);
             var       hovered = ImGui.IsItemHovered();
             c.Pop();
             if (DisplayTime > now && DisplayTime != DateTime.MaxValue)

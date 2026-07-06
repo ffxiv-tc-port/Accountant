@@ -26,7 +26,7 @@ public partial class TimerWindow
             var (_, (data, name))                   = _seenItems[plant.PlantId];
             var cache = new CacheObject
             {
-                Name          = childName,
+                Name          = plant.NeedsFertilizeReminder(Now) ? $"{FertilizeReminderMark} {childName}" : childName,
                 DisplayTime   = UpdateNextChange(time),
                 Color         = color,
                 DisplayString = time < Now ? string.Empty : null,
@@ -44,9 +44,11 @@ public partial class TimerWindow
 
         private SmallHeader GeneratePlantParent(string name, List<CacheObject> children)
         {
+            var needsReminder = children.Any(c => c.Name.StartsWith(FertilizeReminderMark + " ", StringComparison.Ordinal));
+            var displayName   = needsReminder ? $"{FertilizeReminderMark} {name}" : name;
             var ret = new SmallHeader
             {
-                Name         = $"{name} ({children.Count})###{name}",
+                Name         = $"{displayName} ({children.Count})###{name}",
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = children.Count,
                 Color        = ColorId.NeutralText,
@@ -61,12 +63,18 @@ public partial class TimerWindow
 
         private static string OwnerPart(string childName)
         {
+            if (childName.StartsWith(FertilizeReminderMark + " ", StringComparison.Ordinal))
+                childName = childName[(FertilizeReminderMark.Length + 1)..];
+
             var pos = childName.IndexOf(", ", StringComparison.Ordinal);
             return pos < 0 ? childName : childName[..pos];
         }
 
         private static string NameWithoutCount(string nameWithCount)
         {
+            if (nameWithCount.StartsWith(FertilizeReminderMark + " ", StringComparison.Ordinal))
+                nameWithCount = nameWithCount[(FertilizeReminderMark.Length + 1)..];
+
             var pos = nameWithCount.IndexOf('(');
             if (pos < 1 || nameWithCount[pos - 1] != ' ')
                 return nameWithCount;

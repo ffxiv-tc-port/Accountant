@@ -18,6 +18,7 @@ public struct PlantInfo
     public bool     AccuratePlantTime;
     public ushort   FertilizeCount;
     public TimeSpan FertilizeReduction;
+    public DateTime LastFertilizeTime;
 
     public bool Active()
         => PlantId != 0;
@@ -34,6 +35,31 @@ public struct PlantInfo
     public DateTime DyingTime()
         => PlantId != 0 ? LastTending.AddMinutes(Accountant.GameData.FindCrop(PlantId).Data.WiltTime).AddDays(1) : DateTime.MinValue;
 
+    // True if the crop is still growing (with more than 24 hours of growth left - not worth a
+    // reminder once it's close to done anyway) and it has been more than an hour since it was
+    // last (successfully) fertilized - a nudge to go fertilize it again for the growth-time bonus.
+    public bool NeedsFertilizeReminder(DateTime now)
+    {
+        if (PlantId == 0)
+            return false;
+
+        var baseline = LastFertilizeTime == DateTime.MinValue ? PlantTime : LastFertilizeTime;
+        if (baseline == DateTime.MinValue)
+            return false;
+
+        var fin = FinishTime();
+        return fin - now > TimeSpan.FromHours(24) && now - baseline > TimeSpan.FromHours(1);
+    }
+
+    // "Already fully fertilized" is a failure to actually fertilize, but it confirms the crop
+    // is currently up to date, so - if we don't already have a real fertilize timestamp - treat
+    // this moment as a stand-in for one rather than leaving it looking overdue.
+    public void MarkFertilizedIfUnset(DateTime now)
+    {
+        if (LastFertilizeTime == DateTime.MinValue)
+            LastFertilizeTime = now;
+    }
+
     public bool Update(uint itemId, DateTime? plantTime, DateTime? tendTime,
         DateTime? fertilizeTime, Vector3? position = null)
     {
@@ -46,6 +72,7 @@ public struct PlantInfo
             AccuratePlantTime  = false;
             FertilizeCount     = 0;
             FertilizeReduction = TimeSpan.Zero;
+            LastFertilizeTime  = DateTime.MinValue;
             ret                = true;
         }
 
@@ -61,6 +88,7 @@ public struct PlantInfo
                 AccuratePlantTime   = false;
                 FertilizeCount      = 0;
                 FertilizeReduction  = TimeSpan.Zero;
+                LastFertilizeTime   = DateTime.MinValue;
             }
             ret = true;
         }
@@ -72,6 +100,7 @@ public struct PlantInfo
             LastTending        = PlantTime;
             FertilizeCount     = 0;
             FertilizeReduction = TimeSpan.Zero;
+            LastFertilizeTime  = DateTime.MinValue;
             ret                = true;
         }
 
@@ -84,6 +113,7 @@ public struct PlantInfo
                 var reduction = remaining * 0.01;
                 PlantTime          -= reduction;
                 FertilizeReduction += reduction;
+                LastFertilizeTime  =  fertilizeTime.Value;
                 ++FertilizeCount;
                 ret = true;
             }
