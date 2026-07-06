@@ -42,7 +42,12 @@ public partial class TimerWindow
                 Icon          = _icon,
                 IconOffset    = 0.125f,
                 DisplayString = Window.StatusString(type),
-                Color         = type == ObjectStatus.Limited ? ColorId.DisabledText : ColorId.NeutralText,
+                Color = type switch
+                {
+                    ObjectStatus.Limited   => ColorId.DisabledText,
+                    ObjectStatus.Completed => ColorId.TextObjectsHome,
+                    _                      => ColorId.NeutralText,
+                },
             };
         }
 

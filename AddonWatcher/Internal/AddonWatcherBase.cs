@@ -19,8 +19,9 @@ internal partial class AddonWatcherBase : IDisposable
     internal LotteryWeeklyRewardListOnSetup LotteryWeeklyRewardListOnSetup;
     internal TalkOnUpdate                   TalkOnUpdate;
 
-    internal Hook<OnAddonReceiveEventDelegate>? SelectYesNoHook;
-    internal Hook<OnAddonReceiveEventDelegate>? SelectStringHook;
+    internal Hook<OnAddonReceiveEventDelegate>?  SelectYesNoHook;
+    internal Hook<OnAddonReceiveEventDelegate>?  SelectStringHook;
+    internal Hook<OnAddonFireCallbackDelegate>?  FireCallbackHook;
     internal Hook<OnAddonSetupDelegate>?        SelectYesnoSetupHook;
     internal Hook<OnAddonSetupDelegate>?        SelectStringSetupHook;
     internal Hook<OnAddonSetupDelegate>?        JournalResultSetupHook;
@@ -50,6 +51,12 @@ internal partial class AddonWatcherBase : IDisposable
 
         SelectYesNoHook                  = SelectYesnoReceiveEvent.CreateHook(provider, SelectYesNoEventDetour, false);
         SelectStringHook                 = SelectStringReceiveEvent.CreateHook(provider, SelectStringEventDetour, false);
+        unsafe
+        {
+            FireCallbackHook = provider.HookFromAddress<OnAddonFireCallbackDelegate>(
+                FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase.Addresses.FireCallback.Value,
+                FireCallbackDetour);
+        }
         SelectYesnoSetupHook             = SelectYesnoOnSetup.CreateHook(provider, SelectYesnoOnSetupDetour, false);
         SelectStringSetupHook            = SelectStringOnSetup.CreateHook(provider, SelectStringOnSetupDetour, false);
         JournalResultSetupHook           = JournalResultOnSetup.CreateHook(provider, JournalResultOnSetupDetour, false);
@@ -61,6 +68,7 @@ internal partial class AddonWatcherBase : IDisposable
     {
         SelectYesNoHook?.Dispose();
         SelectStringHook?.Dispose();
+        FireCallbackHook?.Dispose();
         SelectYesnoSetupHook?.Dispose();
         SelectStringSetupHook?.Dispose();
         JournalResultSetupHook?.Dispose();

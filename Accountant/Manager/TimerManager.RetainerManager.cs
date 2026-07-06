@@ -1,7 +1,10 @@
 using System;
+using System.Linq;
 using Accountant.Classes;
 using Accountant.Gui.Timer;
+using Accountant.ExternalIpc;
 using Accountant.Timers;
+using Accountant.Util;
 using Dalamud.Plugin.Services;
 
 namespace Accountant.Manager;
@@ -13,14 +16,21 @@ public partial class TimerManager
         public ConfigFlags RequiredFlags
             => ConfigFlags.Enabled | ConfigFlags.Retainers;
 
-        private DateTime _nextRetainerCheck = DateTime.MinValue;
+        private DateTime _nextRetainerCheck     = DateTime.MinValue;
+        private DateTime _nextAutoRetainerSync  = DateTime.MinValue;
         private bool     _state;
 
-        private readonly RetainerTimers _retainers;
+        private readonly RetainerTimers     _retainers;
+        private readonly AirshipTimers      _airships;
+        private readonly SubmersibleTimers  _submersibles;
+        private readonly FreeCompanyStorage _companies;
 
-        public RetainerManager(RetainerTimers retainers)
+        public RetainerManager(RetainerTimers retainers, AirshipTimers airships, SubmersibleTimers submersibles, FreeCompanyStorage companies)
         {
-            _retainers = retainers;
+            _retainers    = retainers;
+            _airships     = airships;
+            _submersibles = submersibles;
+            _companies    = companies;
             SetState();
         }
 
@@ -70,15 +80,25 @@ public partial class TimerManager
             var info         = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
             var count        = manager->GetRetainerCount();
             var changes      = false;
-            Dalamud.Log.Debug($"[Accountant] Retainer poll: player='{info.Name}', count={count}");
+
+            AutoRetainerOfflineCharacterData? autoRetainerData = null;
+            if (AutoRetainerIpc.IsReady())
+                autoRetainerData = AutoRetainerIpc.GetOfflineCharacterData(Dalamud.ClientState.LocalContentId);
+
             for (byte i = 0; i < count; ++i)
             {
                 var data = new RetainerInfo(retainerList[i]);
-                var changed = _retainers.AddOrUpdateRetainer(info, data, i);
-                if (changed)
-                    Dalamud.Log.Debug($"[Accountant] Retainer slot {i} updated: name='{data.Name}', ventureId={data.VentureId}, "
-                      + $"venture={data.Venture:O}, available={data.Available}");
-                changes |= changed;
+                if (data.VentureId == 0 && autoRetainerData != null)
+                {
+                    var supplement = autoRetainerData.RetainerData.FirstOrDefault(r => r.Name == data.Name);
+                    if (supplement is { HasVenture: true, VentureEndsAt: > 0 })
+                    {
+                        data.VentureId = supplement.VentureID;
+                        data.Venture   = global::Accountant.Internal.Helpers.DateFromTimeStamp((uint)supplement.VentureEndsAt);
+                    }
+                }
+
+                changes |= _retainers.AddOrUpdateRetainer(info, data, i);
             }
 
             for (var i = count; i < RetainerInfo.MaxSlots; ++i)
@@ -88,14 +108,80 @@ public partial class TimerManager
                 _retainers.Save(info);
         }
 
+        private void SyncAllCharactersFromAutoRetainer()
+        {
+            if (!AutoRetainerIpc.IsReady())
+                return;
+
+            foreach (var cid in AutoRetainerIpc.GetRegisteredCharacters())
+            {
+                var data = AutoRetainerIpc.GetOfflineCharacterData(cid);
+                if (data == null)
+                    continue;
+
+                var worldId = Accountant.GameData.GetWorldId(data.CurrentWorld);
+                if (worldId == 0)
+                    continue;
+
+                var player  = new PlayerInfo(data.Name, (ushort)worldId);
+                var changed = false;
+                foreach (var retainer in data.RetainerData)
+                {
+                    if (!retainer.HasVenture || retainer.VentureEndsAt <= 0)
+                        continue;
+
+                    changed |= _retainers.UpdateVentureFromExternal(player, retainer.Name, retainer.VentureID,
+                        global::Accountant.Internal.Helpers.DateFromTimeStamp((uint)retainer.VentureEndsAt));
+                }
+
+                if (changed)
+                    _retainers.Save(player);
+
+                // Vessel names are frequently duplicated across different companies (e.g. default
+                // "Submersible-1..4" names), so we only touch vessel data once we know for certain
+                // which company this character belongs to - otherwise we could silently update the
+                // wrong company's timers. That mapping is only learned by actually logging into a
+                // character while Accountant is running.
+                var scopedCompany = _companies.GetCompanyForCharacter(player);
+                if (!scopedCompany.HasValue)
+                    continue;
+
+                foreach (var airship in data.OfflineAirshipData)
+                {
+                    if (airship.ReturnTime == 0)
+                        continue;
+
+                    var company = _airships.UpdateArrivalFromExternal(scopedCompany, airship.Name, global::Accountant.Internal.Helpers.DateFromTimeStamp(airship.ReturnTime));
+                    if (company.HasValue)
+                        _airships.Save(company.Value);
+                }
+
+                foreach (var submersible in data.OfflineSubmarineData)
+                {
+                    if (submersible.ReturnTime == 0)
+                        continue;
+
+                    var company = _submersibles.UpdateArrivalFromExternal(scopedCompany, submersible.Name, global::Accountant.Internal.Helpers.DateFromTimeStamp(submersible.ReturnTime));
+                    if (company.HasValue)
+                        _submersibles.Save(company.Value);
+                }
+            }
+        }
+
         private void OnFrameworkRetainer(IFramework _)
         {
             var now = DateTime.UtcNow;
-            if (_nextRetainerCheck > now)
-                return;
+            if (_nextRetainerCheck <= now)
+            {
+                UpdateRetainers();
+                _nextRetainerCheck = now.AddMilliseconds(5471);
+            }
 
-            UpdateRetainers();
-            _nextRetainerCheck = now.AddMilliseconds(5471);
+            if (_nextAutoRetainerSync <= now)
+            {
+                SyncAllCharactersFromAutoRetainer();
+                _nextAutoRetainerSync = now.AddSeconds(60);
+            }
         }
     }
 }

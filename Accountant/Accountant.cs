@@ -29,7 +29,6 @@ public class Accountant : IDalamudPlugin
     {
         Dalamud.Initialize(pluginInterface);
         Loc.Load(Dalamud.ClientState.ClientLanguage);
-        Dalamud.Log.Debug($"[Accountant] ClientLanguage: {Dalamud.ClientState.ClientLanguage}, Loc loaded: {Loc.IsLoaded}");
         Interop.Init(Dalamud.Log, Dalamud.SigScanner);
         Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
         Config  = AccountantConfiguration.Load();

@@ -37,7 +37,7 @@ public partial class TimerWindow
         }
 
         private static string GetPlantChildName(string name, PlotInfo plot, int idx)
-            => $"{PlantInfo.GetPlotName(Accountant.GameData.GetPlotSize(plot.Zone, plot.Plot), (ushort)idx)}, {name}";
+            => $"{name}, {PlantInfo.GetPlotName(Accountant.GameData.GetPlotSize(plot.Zone, plot.Plot), (ushort)idx)}";
 
         private static string GetPlantChildName(string name, int idx)
             => $"{name} {idx + 1}";
@@ -57,6 +57,12 @@ public partial class TimerWindow
                 UpdateParent(child.Color, child.DisplayTime, ref ret.Color, ref ret.DisplayTime);
 
             return ret;
+        }
+
+        private static string OwnerPart(string childName)
+        {
+            var pos = childName.IndexOf(", ", StringComparison.Ordinal);
+            return pos < 0 ? childName : childName[..pos];
         }
 
         private static string NameWithoutCount(string nameWithCount)
@@ -100,6 +106,11 @@ public partial class TimerWindow
             {
                 if (Accountant.Config.BlockedCrops.Contains(data.Item.RowId))
                     continue;
+                list.Sort((a, b) =>
+                {
+                    var priorityCompare = Accountant.Config.GetPriority(OwnerPart(b.Name)).CompareTo(Accountant.Config.GetPriority(OwnerPart(a.Name)));
+                    return priorityCompare != 0 ? priorityCompare : string.CompareOrdinal(a.Name, b.Name);
+                });
                 Headers.Add(GeneratePlantParent(name, list));
                 UpdateParent(Headers.Last().Color.TextToHeader(), Headers.Last().DisplayTime, ref Color, ref DisplayTime);
             }

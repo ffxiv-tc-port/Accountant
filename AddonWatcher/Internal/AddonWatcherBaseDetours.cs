@@ -54,13 +54,13 @@ internal partial class AddonWatcherBase
             var descriptionText = ptr.Description;
             switch (which)
             {
-                case SelectYesNoInfo.YesButtonId:
+                case SelectYesNoInfo.YesButtonId when ShouldReport(atkUnit, which):
                     var yesText = ptr.YesText;
                     _log.Verbose("Yes-Button {ButtonText} selected on 0x{SelectYesnoPtr:X} with description {Description}.", yesText,
                         (ulong)atkUnit, descriptionText);
                     YesnoSelected!.Invoke(atkUnit, true, yesText, descriptionText);
                     break;
-                case SelectYesNoInfo.NoButtonId:
+                case SelectYesNoInfo.NoButtonId when ShouldReport(atkUnit, which):
                     var noText = ptr.NoText;
                     _log.Verbose("No-Button {ButtonText} selected on 0x{SelectYesnoPtr:X} with description {Description}.", noText,
                         (ulong)atkUnit, descriptionText);
@@ -79,7 +79,7 @@ internal partial class AddonWatcherBase
         if (eventType == EventType.ListIndexChange && data != IntPtr.Zero)
         {
             var owner = ((PopupMenu*)atkUnit)->Owner;
-            if (SelectStringName.EqualsNullTerminated(owner->Name))
+            if (SelectStringName.EqualsNullTerminated(owner->Name) && ShouldReport((IntPtr)owner, ((byte*)data)[0x10]))
             {
                 var ptr              = (IntPtr)owner;
                 var idx              = ((byte*)data)[0x10];

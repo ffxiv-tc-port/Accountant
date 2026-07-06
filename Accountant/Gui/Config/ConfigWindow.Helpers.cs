@@ -106,8 +106,13 @@ public partial class ConfigWindow
         DrawPlotCombo(newPlot, ref plotInfo);
     }
 
-    private static void DrawPlotRow(PlotInfo plot)
+    private static void DrawPlotRow(PlotInfo plot, Manager.DemolitionManager.DemolitionInfo data)
     {
+        ImGui.TableNextColumn();
+        ImGui.SetNextItemWidth(-1);
+        ImGui.InputTextWithHint("##CustomName", Loc.T("Leave blank for default..."), ref data.Name, 128);
+        if (ImGui.IsItemDeactivatedAfterEdit())
+            Accountant.DemoManager.Save();
         ImGui.TableNextColumn();
         ImGui.TextUnformatted(Accountant.GameData.GetWorldName(plot.ServerId));
         ImGui.TableNextColumn();
@@ -120,6 +125,7 @@ public partial class ConfigWindow
 
     private static void SetupPlotHeaders()
     {
+        ImGui.TableSetupColumn(Loc.T("Custom Name"), ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
         ImGui.TableSetupColumn(Loc.T("World"), ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
         ImGui.TableSetupColumn(Loc.T("Zone"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
         ImGui.TableSetupColumn(Loc.T("Ward"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);

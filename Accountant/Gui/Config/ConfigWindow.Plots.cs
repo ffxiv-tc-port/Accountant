@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Numerics;
 using Accountant.Classes;
 using Accountant.Enums;
@@ -170,7 +171,7 @@ public partial class ConfigWindow
 
     private void DrawDemolitionTable(Vector2 size)
     {
-        if (!ImGui.BeginTable("", 4, ImGuiTableFlags.BordersOuter | ImGuiTableFlags.NoClip, size))
+        if (!ImGui.BeginTable("", 5, ImGuiTableFlags.BordersOuter | ImGuiTableFlags.NoClip, size))
             return;
 
         using var table = ImGuiRaii.DeferredEnd(ImGui.EndTable);
@@ -180,10 +181,11 @@ public partial class ConfigWindow
         ImGui.TableSetupScrollFreeze(0, 1);
 
         var idx = 0;
-        foreach (var (value, _) in _demoManager.Data)
+        foreach (var (value, data) in _demoManager.Data
+                     .OrderByDescending(p => Accountant.Config.GetPriority(p.Key.Name)))
         {
             using var id = ImRaii.PushId(idx++);
-            DrawPlotRow(value);
+            DrawPlotRow(value, data);
             ImGui.SameLine();
             if (ImGui.Selectable("", _selectedPlot == value, ImGuiSelectableFlags.AllowItemOverlap | ImGuiSelectableFlags.SpanAllColumns))
                 _selectedPlot = value;
@@ -196,6 +198,7 @@ public partial class ConfigWindow
             _newPlotInfo = newPlot.Value;
         }
 
+        ImGui.TableNextColumn();
         DrawPlotInfoInput(111, ref _newPlotInfo);
 
         ImGui.TableNextColumn();

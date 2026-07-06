@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Accountant.Enums;
 using Accountant.Timers;
 using Accountant.Util;
@@ -24,9 +25,24 @@ public readonly struct PlotInfo(InternalHousingZone zone, ushort ward, ushort pl
     public ulong Value
         => Plot | ((ulong)Ward << 16) | ((ulong)Zone << 32) | ((ulong)ServerId << 48);
 
+    // The demolition tracker's first checked player ("responsible person") is a more useful
+    // label than the raw plot address, since that person is who resets the demolition timer.
     [JsonIgnore]
     public string Name
-        => Accountant.DemoManager.Data.TryGetValue(this, out var ret) && ret.Name.Length > 0 ? ret.Name : ToName();
+    {
+        get
+        {
+            if (Accountant.DemoManager.Data.TryGetValue(this, out var ret))
+            {
+                if (ret.Name.Length > 0)
+                    return ret.Name;
+                if (ret.CheckedPlayers.Count > 0)
+                    return ret.CheckedPlayers.First().Name;
+            }
+
+            return ToName();
+        }
+    }
 
     public bool Equals(PlotInfo other)
         => Zone == other.Zone

@@ -64,11 +64,13 @@ public partial class TimerManager
             _watcher.SubscribeTalkUpdate(CheckPlant);
             _watcher.SubscribeStringSelected(SelectStringEventDetour);
             _watcher.SubscribeYesnoSelected(SelectYesnoEventDetour);
+            Dalamud.Chat.ChatMessage += OnChatMessage;
             _state = true;
         }
 
         private void Disable()
         {
+            Dalamud.Chat.ChatMessage -= OnChatMessage;
             _watcher.UnsubscribeYesnoSelected(SelectYesnoEventDetour);
             _watcher.UnsubscribeStringSelected(SelectStringEventDetour);
             _watcher.UnsubscribeTalkUpdate(CheckPlant);
@@ -79,7 +81,10 @@ public partial class TimerManager
             => Disable();
 
         private static bool IsFertilizeFailureMessage(SeString text)
-            => text.TextValue.Contains("已經施加了足夠的肥料了");
+            => text.TextValue.Contains("已經施加了足夠的肥料了") || text.TextValue.Contains("沒有肥料");
+
+        private static bool IsFertilizeSuccessMessage(SeString text)
+            => text.TextValue.Contains("施加了肥料");
 
         private void ApplyFertilize(CropSpotIdentification id, uint itemId)
         {
@@ -96,14 +101,68 @@ public partial class TimerManager
             }
         }
 
+        // Even when fertilizing fails outright, we already know the crop's identity from the
+        // status message that preceded it - so register it (if not already tracked) without
+        // applying any fertilize-time bonus, letting untracked crops get picked up this way.
+        // Using TendCrop (rather than a bare identity-only update) also gives it an approximate
+        // planted time (the tend timestamp), since an identity-only registration with no time at
+        // all displays as a bogus "already finished" (PlantTime defaults to DateTime.MinValue).
+        private void IdentifyOnly(CropSpotIdentification id, uint itemId)
+        {
+            switch (id.Type)
+            {
+                case CropSpotType.Apartment:
+                case CropSpotType.Chambers:
+                    _privateCrops.TendCrop(id, itemId, DateTime.UtcNow);
+                    break;
+                case CropSpotType.Outdoors:
+                case CropSpotType.House:
+                    _plotCrops.TendCrop(id, itemId, DateTime.UtcNow);
+                    break;
+            }
+        }
+
+        // Flower pot fertilize outcomes (unlike outdoor garden bed ones) are not shown via the
+        // Talk addon at all - only in the chat log - so they need their own separate listener.
+        private void OnChatMessage(global::Dalamud.Game.Text.XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
+        {
+            if (!_pendingFertilize.HasValue)
+                return;
+
+            if (IsFertilizeFailureMessage(message))
+            {
+                var pending = _pendingFertilize.Value;
+                _pendingFertilize = null;
+                IdentifyOnly(pending.Id, pending.ItemId);
+            }
+            else if (IsFertilizeSuccessMessage(message))
+            {
+                var pending = _pendingFertilize.Value;
+                _pendingFertilize = null;
+                ApplyFertilize(pending.Id, pending.ItemId);
+            }
+        }
+
         private void CheckPlant(IntPtr talkPtr, SeString text, SeString speaker)
         {
             if (_pendingFertilize.HasValue)
             {
-                var pending = _pendingFertilize.Value;
-                _pendingFertilize = null;
-                if (!IsFertilizeFailureMessage(text))
+                if (IsFertilizeFailureMessage(text))
+                {
+                    // Fertilizing failed (already fully fertilized, out of fertilizer, etc.) -
+                    // don't count it, but still register the crop's identity if it wasn't tracked yet.
+                    var pending = _pendingFertilize.Value;
+                    _pendingFertilize = null;
+                    IdentifyOnly(pending.Id, pending.ItemId);
+                }
+                else if (IsFertilizeSuccessMessage(text))
+                {
+                    var pending = _pendingFertilize.Value;
+                    _pendingFertilize = null;
                     ApplyFertilize(pending.Id, pending.ItemId);
+                }
+                // Otherwise this is an unrelated Talk message (e.g. ambient dialogue) - keep
+                // waiting for the actual fertilize outcome instead of guessing from its absence.
             }
 
             if (!StringId.CropDoingWell.Match(text) && !StringId.CropBetterDays.Match(text))
@@ -239,7 +298,6 @@ public partial class TimerManager
 
         private void SelectYesnoEventDetour(IntPtr atkUnit, bool yesOrNo, SeString buttonText, SeString descriptionText)
         {
-            Dalamud.Log.Debug($"[Accountant] SelectYesno yesOrNo={yesOrNo}, button='{buttonText.TextValue}', description='{descriptionText.TextValue}'");
             CropData GetCropData(string text)
             {
                 var ret = StringId.SeedMatcher.Filter(text);
@@ -324,17 +382,17 @@ public partial class TimerManager
         {
             SetPatch(descriptionText);
             var id = IdentifyCropSpot();
+            var itemId = _gameData.FindCrop(_lastPlant).Item.RowId;
             if (id.Type == CropSpotType.Invalid)
                 return;
 
             // Deferred: fertilizing can fail silently, only reported by a follow-up
             // Talk message, so we do not know yet whether this actually took effect.
-            _pendingFertilize = (id, _gameData.FindCrop(_lastPlant).Item.RowId);
+            _pendingFertilize = (id, itemId);
         }
 
         private void SelectStringEventDetour(IntPtr unit, int which, SeString buttonText, SeString descriptionText)
         {
-            Dalamud.Log.Debug($"[Accountant] SelectString which={which}, button='{buttonText.TextValue}', description='{descriptionText.TextValue}'");
             switch (which)
             {
                 case 0:
