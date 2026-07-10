@@ -31,6 +31,12 @@ public partial class TimerManager
         // we know whether that failure message appears.
         private (CropSpotIdentification Id, uint ItemId)? _pendingFertilize;
 
+        // By the time the planting Yes/No confirmation shows, the game's current target has
+        // already been cleared (e.g. lost while the seed-selection UI was open), so
+        // IdentifyCropSpot() would fail there for target-based (House/private) spots. Captured
+        // instead at the moment "Sow" is selected, while the target is still valid.
+        private CropSpotIdentification? _pendingPlantSpot;
+
         private readonly PlotCropTimers    _plotCrops;
         private readonly PrivateCropTimers _privateCrops;
 
@@ -341,6 +347,7 @@ public partial class TimerManager
             if (text.StartsWith(StringId.DisposeCrop.Value()))
             {
                 var id = IdentifyCropSpot();
+                Dalamud.Log.Debug($"HarvestCrop (Yesno): yesOrNo={yesOrNo}, type={id.Type}, position={id.Position}");
                 switch (id.Type)
                 {
                     case CropSpotType.Apartment:
@@ -355,11 +362,19 @@ public partial class TimerManager
             }
             else
             {
+                var pendingSpot   = _pendingPlantSpot;
+                _pendingPlantSpot = null;
+                if (!yesOrNo)
+                    return;
+
                 var itemId = GetCropData(text).Item.RowId;
                 if (itemId == 0)
                     return;
 
-                var id = IdentifyCropSpot();
+                // Prefer the spot captured when "Sow" was selected - by the time this Yes/No
+                // confirmation shows, the game's current target (needed for House/private spots)
+                // may already be gone.
+                var id = pendingSpot ?? IdentifyCropSpot();
                 switch (id.Type)
                 {
                     case CropSpotType.Apartment:
@@ -378,6 +393,7 @@ public partial class TimerManager
         {
             SetPatch(descriptionText);
             var id = IdentifyCropSpot();
+            Dalamud.Log.Debug($"HarvestCrop (String): type={id.Type}, position={id.Position}");
             switch (id.Type)
             {
                 case CropSpotType.Apartment:
@@ -434,6 +450,8 @@ public partial class TimerManager
                     else if (StringId.PlantCrop.Match(buttonText))
                     {
                         SetPatch(descriptionText);
+                        var spot = IdentifyCropSpot();
+                        _pendingPlantSpot = spot.Type == CropSpotType.Invalid ? null : spot;
                     }
                     // In slot 0, so removal of withered crop.
                     else if (StringId.RemoveCrop.Match(buttonText))
