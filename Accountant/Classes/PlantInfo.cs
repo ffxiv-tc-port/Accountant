@@ -104,6 +104,17 @@ public struct PlantInfo
             ret                = true;
         }
 
+        // A fertilize report can be the very first time we see this crop (e.g. a fresh
+        // fertilize success on a previously untracked slot). Without a plant/tend time to
+        // go on, use this moment as an approximate planted time instead of leaving the crop
+        // identified but dateless (same rationale as the tend-based fallback above).
+        if (fertilizeTime.HasValue && PlantTime == DateTime.MinValue)
+        {
+            PlantTime   = fertilizeTime.Value;
+            LastTending = fertilizeTime.Value;
+            ret         = true;
+        }
+
         if (fertilizeTime.HasValue && PlantTime != DateTime.MinValue)
         {
             // Fertilizing reduces the remaining growth time by 1%; it does not affect wilting/withering.

@@ -10,8 +10,6 @@ internal partial class AddonWatcherBase
         YesnoSelected += del;
         if (!SelectYesNoHook!.IsEnabled)
             SelectYesNoHook.Enable();
-        if (!FireCallbackHook!.IsEnabled)
-            FireCallbackHook.Enable();
     }
 
     public void UnsubscribeYesnoSelected(ReceiveSelectYesnoDelegate del)
@@ -19,8 +17,6 @@ internal partial class AddonWatcherBase
         YesnoSelected -= del;
         if (YesnoSelected == null)
             SelectYesNoHook!.Disable();
-        if (YesnoSelected == null && StringSelected == null)
-            FireCallbackHook!.Disable();
     }
 
     public void SubscribeOnceYesnoSelected(ReceiveSelectYesnoDelegate del)
@@ -39,8 +35,6 @@ internal partial class AddonWatcherBase
         StringSelected += del;
         if (!SelectStringHook!.IsEnabled)
             SelectStringHook.Enable();
-        if (!FireCallbackHook!.IsEnabled)
-            FireCallbackHook.Enable();
     }
 
     public void UnsubscribeStringSelected(ReceiveSelectStringDelegate del)
@@ -48,8 +42,6 @@ internal partial class AddonWatcherBase
         StringSelected -= del;
         if (StringSelected == null)
             SelectStringHook!.Disable();
-        if (StringSelected == null && YesnoSelected == null)
-            FireCallbackHook!.Disable();
     }
 
     public void SubscribeOnceStringSelected(ReceiveSelectStringDelegate del)
