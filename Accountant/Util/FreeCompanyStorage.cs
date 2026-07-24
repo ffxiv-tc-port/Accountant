@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Accountant.Classes;
 using Dalamud.Logging;
 using Newtonsoft.Json;
@@ -114,6 +115,33 @@ public class FreeCompanyStorage
         var info = Load();
         Infos.Clear();
         Infos.AddRange(info.Infos);
+    }
+
+    private bool _reloadingAsync;
+
+    // Same as Reload(), but for the caller on the framework thread that only needs to pick up
+    // externally-made changes (ConfigSync's periodic mtime check, e.g. a sibling multiboxed
+    // instance writing to the same shared config folder) rather than the initial startup load.
+    // Load() already builds a brand-new, self-contained instance without touching this instance's
+    // state, so it can run on a background thread as-is; only the swap into Infos happens back on
+    // the framework thread so nothing enumerating Infos concurrently sees a torn state.
+    public void ReloadAsync(Action? onReloaded = null)
+    {
+        if (_reloadingAsync)
+            return;
+        _reloadingAsync = true;
+
+        Task.Run(() =>
+        {
+            var info = Load();
+            Dalamud.Framework.RunOnFrameworkThread(() =>
+            {
+                Infos.Clear();
+                Infos.AddRange(info.Infos);
+                onReloaded?.Invoke();
+                _reloadingAsync = false;
+            });
+        });
     }
 
     public static FreeCompanyStorage Load()

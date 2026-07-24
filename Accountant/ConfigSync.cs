@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Accountant.Gui.Timer;
 using Accountant.Manager;
 using Accountant.Timers;
@@ -15,6 +16,7 @@ public class ConfigSync : IDisposable
     private readonly TimerWindow       _window;
     private readonly DemolitionManager _demoManager;
     private          int               _frameCounter;
+    private          bool              _configReloadingAsync;
 
     public ConfigSync(TimerManager manager, TimerWindow window, DemolitionManager demoManager)
     {
@@ -30,12 +32,7 @@ public class ConfigSync : IDisposable
         {
             case 0:
                 if (File.GetLastWriteTimeUtc(Dalamud.PluginInterface.ConfigFile.FullName) > Accountant.Config.LastChangeTime)
-                {
-                    Accountant.Config = AccountantConfiguration.Load();
-                    _manager.CheckSettings();
-                    _window.ResetCache();
-                    Dalamud.Log.Verbose("Reloaded Config due to external changes.");
-                }
+                    ReloadConfigAsync();
 
                 break;
             case 10:
@@ -61,22 +58,45 @@ public class ConfigSync : IDisposable
                 break;
             case 80:
                 if (FreeCompanyStorage.GetWriteTime() > _manager.CompanyStorage.LastChangeTime)
-                {
-                    _manager.CompanyStorage.Reload();
-                    _window.ResetCache();
-                }
+                    _manager.CompanyStorage.ReloadAsync(() => _window.ResetCache());
 
                 break;
             case 90:
                 if (_demoManager.GetWriteTime() > _demoManager.LastChangeTime)
-                {
-                    _demoManager.Reload();
-                    Dalamud.Log.Verbose("Reloaded {Timer:l} due to external changes.", typeof(DemolitionManager));
-                    _window.ResetCache();
-                }
+                    _demoManager.ReloadAsync(() =>
+                    {
+                        Dalamud.Log.Verbose("Reloaded {Timer:l} due to external changes.", typeof(DemolitionManager));
+                        _window.ResetCache();
+                    });
 
                 break;
         }
+    }
+
+    // Same rationale as TimersBase.ReloadAsync(): AccountantConfiguration.Load() calls
+    // IDalamudPluginInterface.GetPluginConfig(), which does a reflection-based type scan of this
+    // assembly plus a File.ReadAllText + JsonConvert.DeserializeObject (and, occasionally, a
+    // SavePluginConfig() write-back if defaults were missing) - none of that touches Dalamud's UI
+    // or native game memory, so it is safe to run off the framework thread. Only the publish step
+    // (swapping in the newly loaded config and notifying dependents) runs on the framework thread.
+    private void ReloadConfigAsync()
+    {
+        if (_configReloadingAsync)
+            return;
+        _configReloadingAsync = true;
+
+        Task.Run(() =>
+        {
+            var config = AccountantConfiguration.Load();
+            Dalamud.Framework.RunOnFrameworkThread(() =>
+            {
+                Accountant.Config = config;
+                _manager.CheckSettings();
+                _window.ResetCache();
+                Dalamud.Log.Verbose("Reloaded Config due to external changes.");
+                _configReloadingAsync = false;
+            });
+        });
     }
 
     private static void CheckTimersFolder<T1, T2>(TimersBase<T1, T2> timer) where T1 : struct, ITimerIdentifier
