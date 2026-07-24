@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Dalamud.Logging;
 using Newtonsoft.Json;
 
@@ -135,5 +136,63 @@ public class TimersBase<TIdent, TInfo> : ITimers<TIdent, TInfo>
         }
         Invoke();
         FileChangeTime = DateTime.UtcNow.AddMilliseconds(500);
+    }
+
+    private bool _reloadingAsync;
+
+    // Same as Reload(), but for callers on the framework thread that only need to pick up
+    // externally-made changes (ConfigSync's periodic mtime check, e.g. a sibling multiboxed
+    // instance writing to the same shared config folder) rather than the initial startup load.
+    // Cost scales with how many timers of this kind are saved, so do the file I/O + JSON parsing
+    // on a background thread; InternalData is mutated only on the framework thread afterwards to
+    // avoid racing any UI code enumerating Data mid-reload.
+    public void ReloadAsync()
+    {
+        if (_reloadingAsync)
+            return;
+        _reloadingAsync = true;
+
+        Task.Run(() =>
+        {
+            var loaded = new Dictionary<TIdent, TInfo>();
+            try
+            {
+                var folder = CreateFolder(FolderName);
+                foreach (var file in folder.EnumerateFiles("*.json"))
+                {
+                    try
+                    {
+                        var data          = File.ReadAllText(file.FullName);
+                        var (ident, info) = JsonConvert.DeserializeObject<(TIdent, TInfo)>(data);
+                        if (ident.Valid())
+                            loaded[ident] = info;
+                        else
+                        {
+                            Dalamud.Log.Error($"{ParseError}:\nIdentifier was not valid.");
+                            file.Delete();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Dalamud.Log.Error($"{ParseError}:\n{e}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Dalamud.Log.Error($"{LoadError}:\n{e}");
+            }
+
+            Dalamud.Framework.RunOnFrameworkThread(() =>
+            {
+                InternalData.Clear();
+                foreach (var (ident, info) in loaded)
+                    InternalData[ident] = info;
+
+                Invoke();
+                FileChangeTime = DateTime.UtcNow.AddMilliseconds(500);
+                _reloadingAsync = false;
+            });
+        });
     }
 }
