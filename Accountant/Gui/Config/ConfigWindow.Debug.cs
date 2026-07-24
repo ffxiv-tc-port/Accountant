@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Accountant.Enums;
 using Dalamud.Interface.Utility.Raii;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using OtterLoc.Structs;
 
 namespace Accountant.Gui.Config;
@@ -49,7 +49,7 @@ public partial class ConfigWindow
             ImGui.TableNextColumn();
             ImGui.TextUnformatted(id.ToString());
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted(id.Value());
+            ImGui.TextUnformatted((string)id.Value());
         }
     }
 
