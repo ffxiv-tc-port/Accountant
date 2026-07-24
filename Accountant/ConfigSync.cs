@@ -86,7 +86,7 @@ public class ConfigSync : IDisposable
          && !dir.EnumerateFiles("*.json").Any(file => file.LastWriteTimeUtc > timer.FileChangeTime))
             return;
 
-        timer.Reload();
+        timer.ReloadAsync();
         Dalamud.Log.Verbose("Reloaded {Timer:l} due to external changes.", typeof(T2).Name);
     }
 
