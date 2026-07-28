@@ -42,13 +42,13 @@ public class Accountant : IDalamudPlugin
 
         Dalamud.Commands.AddHandler("/accountant", new CommandInfo(OnAccountant)
         {
-            HelpMessage = "Open Accountant config. Use '/acct' or '/accountant timers' to toggle the timer window.",
+            HelpMessage = Loc.T("Open Accountant config. Use '/acct' or '/accountant timers' to toggle the timer window."),
             ShowInHelp  = true,
         });
 
         Dalamud.Commands.AddHandler("/acct", new CommandInfo(OnAcct)
         {
-            HelpMessage = "Toggle the timer window.",
+            HelpMessage = Loc.T("Toggle the timer window."),
             ShowInHelp  = true,
         });
         _configSync = new ConfigSync(Timers, TimerWindow, DemoManager);

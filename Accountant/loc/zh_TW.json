@@ -1,4 +1,6 @@
 {
+  "Open Accountant config. Use '/acct' or '/accountant timers' to toggle the timer window.": "開啟 Accountant 設定。使用 '/acct' 或 '/accountant timers' 可切換計時器視窗。",
+  "Toggle the timer window.": "切換計時器視窗。",
   "Enable Plugin": "啟用插件",
   "Show Timers": "顯示計時器",
   "Show DTR Header": "顯示 DTR 標題列",
