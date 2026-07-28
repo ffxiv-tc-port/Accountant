@@ -51,12 +51,13 @@ public static class LocalizationDict<T> where T : Enum
     public static bool RegisterName(T key, ClientLanguage lang, string en, string jp, string de, string fr, string? zh = null)
         => lang switch
         {
-            ClientLanguage.Japanese           => Register(key, jp),
-            ClientLanguage.German             => Register(key, de),
-            ClientLanguage.French             => Register(key, fr),
-            ClientLanguage.ChineseSimplified  => Register(key, zh ?? en),
-            ClientLanguage.ChineseTraditional => Register(key, zh ?? en),
-            _                                 => Register(key, en),
+            ClientLanguage.Japanese => Register(key, jp),
+            ClientLanguage.German   => Register(key, de),
+            ClientLanguage.French   => Register(key, fr),
+            // TC(台服)客戶端在 Dalamud 13.0.0.16 之後回報 ClientLanguage 7(TraditionalChinese),
+            // 舊版回報 4(ChineseSimplified)。用數值比較才能同時相容 CI 釘的 13.0.0.6(列舉沒有 7 這個名字)與執行期新版。
+            (ClientLanguage)4 or (ClientLanguage)5 or (ClientLanguage)7 => Register(key, zh ?? en),
+            _ => Register(key, en),
         };
 
     public static bool RegisterName(T key, ClientLanguage lang, SeString se, int payloadEn, int payloadJp, int payloadDe, int payloadFr)
