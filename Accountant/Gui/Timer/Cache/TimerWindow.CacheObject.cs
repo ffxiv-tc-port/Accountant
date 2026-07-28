@@ -2,7 +2,7 @@
 using System.Numerics;
 using Accountant.Gui.Helper;
 using Dalamud.Interface.Textures;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace Accountant.Gui.Timer.Cache;
 
@@ -23,13 +23,13 @@ public struct CacheObject
 
         if (IconOffset == 0)
         {
-            ImGui.Image(icon.ImGuiHandle, Vector2.One * ImGui.GetTextLineHeight());
+            ImGui.Image(icon.Handle, Vector2.One * ImGui.GetTextLineHeight());
         }
         else
         {
             var offset = Vector2.One * IconOffset;
             var size   = Vector2.One - offset;
-            ImGui.Image(icon.ImGuiHandle, Vector2.One * ImGui.GetTextLineHeight(), offset, size);
+            ImGui.Image(icon.Handle, Vector2.One * ImGui.GetTextLineHeight(), offset, size);
         }
 
         ImGui.SameLine(0, ImGui.GetStyle().ItemSpacing.X / 2);

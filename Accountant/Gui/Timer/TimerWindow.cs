@@ -5,10 +5,11 @@ using Accountant.Enums;
 using Accountant.Gui.Helper;
 using Accountant.Manager;
 using Accountant.Util;
+using Dalamud.Game.Gui.Dtr;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using OtterLoc.Structs;
 using DateTime = System.DateTime;
 
@@ -62,6 +63,9 @@ public partial class TimerWindow : IDisposable
         Accountant.Config.WindowVisible = !Accountant.Config.WindowVisible;
         Accountant.Config.Save();
     }
+
+    public static void Toggle(DtrInteractionEvent obj)
+        => Toggle();
 
     private void SetWidthTotal()
     {

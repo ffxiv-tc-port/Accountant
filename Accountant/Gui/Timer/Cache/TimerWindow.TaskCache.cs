@@ -6,7 +6,7 @@ using Accountant.Classes;
 using Accountant.Enums;
 using Accountant.Gui.Timer.Cache;
 using Accountant.Timers;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using OtterLoc.Structs;
 
 namespace Accountant.Gui.Timer;
@@ -64,7 +64,7 @@ public partial class TimerWindow
             };
             if (map == DateTime.MinValue || map < Now)
             {
-                ret.DisplayString = StringId.Available.Value();
+                ret.DisplayString = (string)StringId.Available.Value();
                 ret.Color         = ColorId.NeutralText;
             }
             else
