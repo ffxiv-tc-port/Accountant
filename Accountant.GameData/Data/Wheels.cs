@@ -23,6 +23,13 @@ public class Wheels
     private static readonly Regex WheelRegex = new(@"^grade (?<grade>\d) wheel of", RegexOptions.Compiled);
     private static readonly Regex PrimedWheelRegex = new(@"^primed grade (?<grade>\d) wheel of", RegexOptions.Compiled);
 
+    // 台服(TC)注意:我們的 Dalamud fork 的 Lumina 會把指定語言的 Excel 請求靜默改成 client 語言,
+    // 下面以 ClientLanguage.English 取得的 Item 表實際上是繁中資料,英文 regex 永遠不中。
+    // 台服命名(7.20 dump 實查,基礎/充能各 49 顆、一一對應):
+    //   未充能=「N級○○乙太轉輪」、充能完畢=「N級○○充電轉輪」(N=1~3)。
+    private static readonly Regex WheelRegexTC       = new(@"^(?<grade>\d)級.+乙太轉輪$", RegexOptions.Compiled);
+    private static readonly Regex PrimedWheelRegexTC = new(@"^(?<grade>\d)級.+充電轉輪$", RegexOptions.Compiled);
+
     internal Wheels(IDataManager gameData)
     {
         var items        = gameData.GetExcelSheet<Item>(ClientLanguage.English);
@@ -31,13 +38,22 @@ public class Wheels
         var englishDict  = new Dictionary<string, (Item Item, string Name, byte Grade)>(50);
         foreach (var item in items)
         {
-            var englishName  = item.Name.ExtractText().ToLowerInvariant();
+            var englishName  = item.Name.ExtractText().ToLowerInvariant(); // 台服上實際是繁中名(小寫化對 CJK 無作用)
             var match = WheelRegex.Match(englishName);
+            if (!match.Success)
+                match = WheelRegexTC.Match(englishName);
             if (!match.Success)
             {
                 match = PrimedWheelRegex.Match(englishName);
                 if (match.Success)
+                {
                     primedWheels.Add((englishName.Replace("primed ", ""), item.RowId));
+                    continue;
+                }
+
+                match = PrimedWheelRegexTC.Match(englishName);
+                if (match.Success)
+                    primedWheels.Add((englishName.Replace("充電轉輪", "乙太轉輪"), item.RowId));
                 continue;
             }
 
