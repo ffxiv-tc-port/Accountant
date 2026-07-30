@@ -43,7 +43,6 @@
   "Airship Entries": "飛行船項目",
   "Submersible Entries": "潛水艇項目",
   "Wheel Entries": "乙太轉輪項目",
-
   "All Objects Underway": "全部項目皆已派遣",
   "Some Objects Underway": "部分項目已派遣",
   "No Objects Underway": "沒有項目已派遣",
@@ -69,7 +68,6 @@
   "Default Header": "預設標題",
   "Disabled Text": "已停用文字",
   "Background": "背景",
-
   "Used by player or free company names if all their retainers, airships or submersibles are away.": "當玩家或公會的所有僱員、飛行船或潛水艇皆已派遣時，用於顯示玩家或公會名稱。",
   "Used by player or free company names if some their retainers, airships or submersibles are away and some are available.": "當玩家或公會的僱員、飛行船或潛水艇部分已派遣、部分可用時，用於顯示玩家或公會名稱。",
   "Used by player or free company names if all their retainers, airships or submersibles are available.": "當玩家或公會的所有僱員、飛行船或潛水艇皆可用時，用於顯示玩家或公會名稱。",
@@ -91,7 +89,6 @@
   "Used by all headers that are not colored differently.": "用於所有未另行上色的標題。",
   "Used by disabled retainers or machines.": "用於已停用的僱員或載具。",
   "Used for the background color.": "用於背景顏色。",
-
   "Blocked Crops": "已封鎖作物",
   "Blocked Plots": "已封鎖地塊",
   "Blocked Players (Crops)": "已封鎖玩家（作物）",
@@ -110,12 +107,10 @@
   "Zone": "地區",
   "Ward": "區",
   "Plot": "地塊",
-
   "Custom Name": "自訂名稱",
   "Leave blank for default...": "留白使用預設值...",
   "Tracked": "已追蹤",
-  "The name entered here will replace all occurrences of the plot in the timer window.\n\nThe timer limit will show this house as due to be demolished in the timer window when the configured number of days passed since your last visit.\n\nThe warning timer limit will show notifications on the bottom right when the configured number of days passed since your last visit.\n\nYou need to manually add players that reset the timer when encountered within the house, otherwise the timer will not update.":
-    "在此輸入的名稱會取代計時器視窗中所有該地塊的顯示名稱。\n\n當自上次拜訪經過的天數達到設定值時，計時器視窗會顯示這間房屋即將被拆除。\n\n當自上次拜訪經過的天數達到警告設定值時，會在右下角顯示通知。\n\n你需要手動加入在房屋內遇到時會重置計時器的玩家，否則計時器不會更新。",
+  "The name entered here will replace all occurrences of the plot in the timer window.\n\nThe timer limit will show this house as due to be demolished in the timer window when the configured number of days passed since your last visit.\n\nThe warning timer limit will show notifications on the bottom right when the configured number of days passed since your last visit.\n\nYou need to manually add players that reset the timer when encountered within the house, otherwise the timer will not update.": "在此輸入的名稱會取代計時器視窗中所有該地塊的顯示名稱。\n\n當自上次拜訪經過的天數達到設定值時，計時器視窗會顯示這間房屋即將被拆除。\n\n當自上次拜訪經過的天數達到警告設定值時，會在右下角顯示通知。\n\n你需要手動加入在房屋內遇到時會重置計時器的玩家，否則計時器不會更新。",
   "Show in Timers": "在計時器中顯示",
   "%i Days Since Visit": "拜訪後 %i 天",
   "Show Warnings": "顯示警告",
@@ -140,33 +135,26 @@
   "Select a plot and hold Control to delete.": "選擇一個地塊並按住 Control 以刪除。",
   "Hold Control to delete the selected plot.": "按住 Control 以刪除選取的地塊。",
   "Delete Selected Plot": "刪除選取的地塊",
-
   "Priority": "優先順序",
   "Name": "名稱",
   "New Priority Name...": "新優先順序名稱...",
-
   "Hold Control, Shift and right-click to delete.": "按住 Control、Shift 並右鍵點擊以刪除。",
   "Hold Shift and right-click to delete.": "按住 Shift 並右鍵點擊以刪除。",
-
   "No Full Free Company Data": "公會資料不完整",
-  "No full data about your current free company available.\n\nPlease leave your current instance or relog onto your character if this does not help to obtain Free Company Data after a Accountant Update.\n\nYou can disable this warning permanently in the settings.":
-    "目前無法取得你公會的完整資料。\n\n如果 Accountant 更新後仍無法取得公會資料，請離開目前的副本或重新登入角色。\n\n你可以在設定中永久停用此警告。",
+  "No full data about your current free company available.\n\nPlease leave your current instance or relog onto your character if this does not help to obtain Free Company Data after a Accountant Update.\n\nYou can disable this warning permanently in the settings.": "目前無法取得你公會的完整資料。\n\n如果 Accountant 更新後仍無法取得公會資料，請離開目前的副本或重新登入角色。\n\n你可以在設定中永久停用此警告。",
   "Demolishing Houses": "即將拆除的房屋",
   "Limited": "受限",
   "Demolished": "已拆除",
   "<1 Day Remaining": "不到 1 天",
   "1 Day Remaining": "剩 1 天",
   "{0} Days Remaining": "剩 {0} 天",
-
   "Crops": "作物",
   "Tasks": "任務",
   "Retainers": "僱員",
   "Aetherial Wheels": "乙太轉輪",
   "Airships": "飛行船",
   "Submersibles": "潛水艇",
-
-  "Outdoor crops only refresh every 63 minutes on a ward-specific update timer.\nAny timer may be delayed by up to 63 minutes.\nFertilizing a plant during these delays will automatically trigger updates.\nThey will still grow out/wilt/wither in order, and grown-out plants do not wither anymore.\nIndoors, clearing the house and re-entering should automatically trigger updates.\nYou can disable this tooltip in the configuration.":
-    "室外作物只會依照每區專屬的更新計時器每 63 分鐘刷新一次。\n任何計時器都可能延遲最多 63 分鐘。\n在這段延遲期間施肥會自動觸發更新。\n作物仍會依序成熟過度/凋萎/枯萎，且已成熟過度的作物不會再枯萎。\n室內的話，清空房屋再重新進入應該會自動觸發更新。\n你可以在設定中停用此提示。",
+  "Outdoor crops only refresh every 63 minutes on a ward-specific update timer.\nAny timer may be delayed by up to 63 minutes.\nFertilizing a plant during these delays will automatically trigger updates.\nThey will still grow out/wilt/wither in order, and grown-out plants do not wither anymore.\nIndoors, clearing the house and re-entering should automatically trigger updates.\nYou can disable this tooltip in the configuration.": "室外作物只會依照每區專屬的更新計時器每 63 分鐘刷新一次。\n任何計時器都可能延遲最多 63 分鐘。\n在這段延遲期間施肥會自動觸發更新。\n作物仍會依序成熟過度/凋萎/枯萎，且已成熟過度的作物不會再枯萎。\n室內的話，清空房屋再重新進入應該會自動觸發更新。\n你可以在設定中停用此提示。",
   "Already": "已完成",
   "Unknown": "未知",
   "Never": "永不",
@@ -178,7 +166,6 @@
   "Fertilized:": "施肥：",
   "{0} times, -{1}": "{0} 次，減少 {1}",
   "Position:": "位置：",
-
   "Squadron Mission": "分隊任務",
   "Squadron Training": "分隊訓練",
   "New Recruits": "新兵招募",
@@ -192,8 +179,8 @@
   "Custom Deliveries": "老主顧交易",
   "Tribal Quests": "部族任務",
   "Leve Allowances": "理符任務次數",
-
   "Primed": "已就緒",
-
-  "Default": "預設值"
+  "Default": "預設值",
+  "Only Track Grade 3 Wheels": "只追蹤 3 級乙太轉輪",
+  "Hide grade 1 and 2 aetherial wheels from the timers.": "在計時器中隱藏 1 級與 2 級的乙太轉輪。"
 }
