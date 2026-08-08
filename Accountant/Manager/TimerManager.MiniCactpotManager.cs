@@ -81,7 +81,7 @@ public partial class TimerManager
             var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
             if (_tasks.AddOrUpdateMiniCactpot(player, mini))
                 _tasks.Save(player);
-            _goldSaucerUpdateHook!.Original(_, packet);
+            _goldSaucerUpdateHook!.OriginalDisposeSafe(_, packet);
         }
 
         private void TicketBought(IntPtr _, bool which, SeString button, SeString description)

@@ -117,7 +117,7 @@ public partial class TimerManager
             }
             finally
             {
-                _airshipTimersHook!.Original(manager, data);
+                _airshipTimersHook!.OriginalDisposeSafe(manager, data);
             }
         }
 
@@ -145,7 +145,7 @@ public partial class TimerManager
             }
             finally
             {
-                _airshipStatusListHook!.Original(manager, data);
+                _airshipStatusListHook!.OriginalDisposeSafe(manager, data);
             }
         }
     }

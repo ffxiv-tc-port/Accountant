@@ -104,7 +104,7 @@ public partial class TimerManager
                 jumbo.LastUpdate = jumbo.NextReset(player.ServerId).AddDays(-7);
             if (_tasks.AddOrUpdateJumboCactpot(player, jumbo))
                 _tasks.Save(player);
-            _goldSaucerUpdateHook!.Original(_, packet);
+            _goldSaucerUpdateHook!.OriginalDisposeSafe(_, packet);
         }
 
         private void TicketBought(IntPtr _, bool which, SeString button, SeString description)

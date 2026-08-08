@@ -122,7 +122,7 @@ public partial class TimerManager
             finally
 
             {
-                _submersibleTimersHook!.Original(manager, data);
+                _submersibleTimersHook!.OriginalDisposeSafe(manager, data);
             }
         }
 
@@ -150,7 +150,7 @@ public partial class TimerManager
             }
             finally
             {
-                _submersibleStatusListHook!.Original(manager, data);
+                _submersibleStatusListHook!.OriginalDisposeSafe(manager, data);
             }
         }
     }
