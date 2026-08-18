@@ -60,7 +60,7 @@ public partial class TimerManager
 
         private unsafe void UpdateLeves()
         {
-            if (Dalamud.ClientState.LocalPlayer == null)
+            if (Dalamud.Objects.LocalPlayer == null)
                 return;
 
             var questManager = QuestManager.Instance();
@@ -68,7 +68,7 @@ public partial class TimerManager
                 return;
 
             var leves = questManager->NumLeveAllowances;
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer);
 
             if (_tasks!.AddOrUpdateLeves(player, leves))
                 _tasks.Save(player);

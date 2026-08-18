@@ -107,8 +107,8 @@ public partial class ConfigWindow
 
         ImGui.InputTextWithHint("##PlayerName", Loc.T("New Player Name..."), ref _newPlayerName, 40);
         ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
-        if (_newWorldId == 0 && Dalamud.ClientState.LocalPlayer is not null)
-            _newWorldId = (ushort)Dalamud.ClientState.LocalPlayer.HomeWorld.RowId;
+        if (_newWorldId == 0 && Dalamud.Objects.LocalPlayer is not null)
+            _newWorldId = (ushort)Dalamud.Objects.LocalPlayer.HomeWorld.RowId;
         DrawWorldsCombo(ref _newWorldId);
 
 
@@ -128,12 +128,12 @@ public partial class ConfigWindow
 
         ImGui.SameLine();
 
-        using (ImRaii.Disabled(Dalamud.ClientState.LocalPlayer == null
-                || data.CheckedPlayers.Contains(new PlayerInfo(Dalamud.ClientState.LocalPlayer))))
+        using (ImRaii.Disabled(Dalamud.Objects.LocalPlayer == null
+                || data.CheckedPlayers.Contains(new PlayerInfo(Dalamud.Objects.LocalPlayer))))
         {
             if (ImGui.Button(Loc.T("Add Current Player")))
             {
-                data.CheckedPlayers.Add(new PlayerInfo(Dalamud.ClientState.LocalPlayer!));
+                data.CheckedPlayers.Add(new PlayerInfo(Dalamud.Objects.LocalPlayer!));
                 _demoManager.Save();
             }
         }
@@ -194,9 +194,9 @@ public partial class ConfigWindow
         }
 
         var newPlot = PlotInfo.FromValue(_newPlotInfo);
-        if (newPlot.ServerId == 0 && Dalamud.ClientState.LocalPlayer != null)
+        if (newPlot.ServerId == 0 && Dalamud.Objects.LocalPlayer != null)
         {
-            newPlot      = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.ClientState.LocalPlayer.CurrentWorld.RowId);
+            newPlot      = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.Objects.LocalPlayer.CurrentWorld.RowId);
             _newPlotInfo = newPlot.Value;
         }
 

@@ -59,7 +59,7 @@ public partial class TimerManager
 
         private void UpdateSquadron()
         {
-            if (Dalamud.ClientState.LocalPlayer == null)
+            if (Dalamud.Objects.LocalPlayer == null)
                 return;
 
             var missionId = Interop.SquadronContainer.MissionId;
@@ -75,7 +75,7 @@ public partial class TimerManager
                 NewRecruits = Interop.SquadronContainer.NewRecruits,
             };
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer);
 
             if (_tasks.AddOrUpdateSquadron(player, info))
                 _tasks.Save(player);
