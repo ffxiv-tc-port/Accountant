@@ -156,13 +156,21 @@ public partial class TimerManager
             for (var i = 8; i < 8 + WheelInfo.MaxSlots; ++i)
             {
                 var button = (AtkComponentNode*)wheel->UldManager.NodeList[i];
-                if (button == null || button->Component->UldManager.NodeListCount < 10)
+                // AtkComponentNode.Component 是偏移 0xB0 的指標欄位，節點還在建的時候可能還沒接上；
+                // 少了這一關，下面那個看起來很像守衛的 NodeListCount 比對其實是對位址 0xB0+n 解參考。
+                if (button == null || button->Component == null || button->Component->UldManager.NodeListCount < 10)
                     continue;
 
                 if (SetCompanyInfo())
                     return;
 
-                var text = button->Component->UldManager.NodeList[5];
+                // 上面的 NodeListCount < 10 已經涵蓋索引 5／8／9 的上界，但**元素本身仍可為 null**
+                // （上界檢查與元素判空是兩件事，只做一半就是半套邊界檢查）。
+                var nodes = button->Component->UldManager.NodeList;
+                var text  = nodes[5];
+                if (text == null)
+                    continue;
+
                 var now  = DateTime.UtcNow;
                 var slot = (byte)(14 - i);
                 if (!text->IsVisible())
@@ -171,8 +179,18 @@ public partial class TimerManager
                 }
                 else
                 {
-                    var fill     = button->Component->UldManager.NodeList[8]->ScaleX;
-                    var seString = MemoryHelper.ReadSeString(&((AtkTextNode*)button->Component->UldManager.NodeList[9])->NodeText);
+                    // 🔴 fillNode／nameNode 任一取不到就跳過這一格（每幀輪詢⇒安靜跳過、不寫 log）。
+                    // 跳過是 fail-closed：寧可這一幀不更新，也不要拿殘缺的資料覆寫既有紀錄。
+                    var fillNode = nodes[8];
+                    var nameNode = (AtkTextNode*)nodes[9];
+                    if (fillNode == null || nameNode == null)
+                        continue;
+
+                    var fill = fillNode->ScaleX;
+                    // 🔴 &nameNode->NodeText 對 null 節點**不會當場崩**：NodeText 在 AtkTextNode 偏移 0xC0，
+                    // 算出的毒指標 0xC0 連 MemoryHelper.ReadSeString 內部的 != null 判空都騙得過去，
+                    // 一路到真的去讀位址 0xC0 才炸 —— 崩潰現場完全指不到這一行。
+                    var seString = MemoryHelper.ReadSeString(&nameNode->NodeText);
                     seString.Payloads.RemoveAll(p => p is NewLinePayload);
                     var name = seString.TextValue;
                     var (item, _, grade) = Accountant.GameData.FindWheel(name);
