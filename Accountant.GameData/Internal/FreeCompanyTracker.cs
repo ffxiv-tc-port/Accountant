@@ -75,10 +75,31 @@ internal class FreeCompanyTracker
     private static unsafe IntPtr GetDataPointer(IPluginLog log, IGameGui gui)
     {
         var uiModule = gui.GetUIModule();
-        var vf34     = (IntPtr*)(*(ulong*)uiModule.Address + 8 * Offsets.FreeCompany.FreeCompanyModuleVfunc);
+
+        // 🔴 `gui.GetUIModule()` 是 Dalamud 的服務包裝（UIModulePtr），包的就是
+        // `(nint)UIModule.Instance()` —— **`.Address` 合法為 0**（UIModule.Instance() 內部是
+        // `Framework.Instance() == null ? null : ...`）。原本直接 `*(ulong*)uiModule.Address`
+        // 讀 vtable 指標，Address 為 0 時就是 AccessViolationException，
+        // 而 AVE 是 corrupted-state exception，呼叫端任何 try/catch 都攔不到。
+        if (uiModule.Address == IntPtr.Zero)
+        {
+            log.Error("Could not obtain free company data: UIModule is not available yet.");
+            return IntPtr.Zero;
+        }
+
+        var vf34 = (IntPtr*)(*(ulong*)uiModule.Address + 8 * Offsets.FreeCompany.FreeCompanyModuleVfunc);
         log.Verbose($"Obtained free company data module getter (VFunc 34 of uiModule) at 0x{(ulong)vf34:X16}.");
         var module = ((delegate*<IntPtr, IntPtr>)*vf34)(uiModule);
         log.Verbose($"Obtained free company data module at 0x{module:X16}.");
+
+        // 同一條鏈的第二跳：vfunc 取不到自由部隊模組時回 null，
+        // `*(IntPtr*)(0 + DataOffset)` 一樣是 AVE。
+        if (module == IntPtr.Zero)
+        {
+            log.Error("Could not obtain free company data: free company module is null.");
+            return IntPtr.Zero;
+        }
+
         var data = *(IntPtr*)(module + Offsets.FreeCompany.DataOffset);
         if (data == IntPtr.Zero)
             log.Error("Could not obtain free company data.");
