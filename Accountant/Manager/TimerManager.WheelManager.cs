@@ -83,10 +83,17 @@ public partial class TimerManager
             for (var i = 8; i < 8 + WheelInfo.MaxSlots; ++i)
             {
                 var button = (AtkComponentNode*)wheel->UldManager.NodeList[i];
-                if (button == null || button->Component->UldManager.NodeListCount < 3)
+                // 與 OnFrameworkWheel 裡同一個形狀:Component 是偏移 0xB0 的指標欄位,
+                // 沒判它的話那句 NodeListCount < 3 其實是對位址 0xB0+n 解參考;
+                // 而上界(< 3)只涵蓋索引 2 的範圍,元素本身仍可為 null。
+                if (button == null || button->Component == null || button->Component->UldManager.NodeListCount < 3)
                     continue;
 
-                if (button->Component->UldManager.NodeList[2]->IsVisible())
+                var node = button->Component->UldManager.NodeList[2];
+                if (node == null)
+                    continue;
+
+                if (node->IsVisible())
                     return (byte)(14 - i);
             }
 
