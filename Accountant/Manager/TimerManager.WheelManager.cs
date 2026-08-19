@@ -6,6 +6,7 @@ using Accountant.Gui.Timer;
 using Accountant.Timers;
 using Accountant.Util;
 using AddonWatcher;
+using AtkHelpers = AddonWatcher.Internal.Helpers;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Logging;
@@ -82,14 +83,18 @@ public partial class TimerManager
 
             for (var i = 8; i < 8 + WheelInfo.MaxSlots; ++i)
             {
-                var button = (AtkComponentNode*)wheel->UldManager.NodeList[i];
+                // 🔴 上界(上面的 NodeListCount < 14)與元素判空原本都有,少的是**最外面那一層**:
+                // NodeList 這個指標欄位本身。版面拆除時它會先被釋放設成 null 而 NodeListCount
+                // 不保證同時歸零,那一瞬間 NodeList[i] 讀的是位址 i*8,兩道既有的檢查都會放行。
+                // AtkHelpers.GetNodeSafe 把三件事一起做。
+                var button = (AtkComponentNode*)AtkHelpers.GetNodeSafe(&wheel->UldManager, i);
                 // 與 OnFrameworkWheel 裡同一個形狀:Component 是偏移 0xB0 的指標欄位,
                 // 沒判它的話那句 NodeListCount < 3 其實是對位址 0xB0+n 解參考;
                 // 而上界(< 3)只涵蓋索引 2 的範圍,元素本身仍可為 null。
                 if (button == null || button->Component == null || button->Component->UldManager.NodeListCount < 3)
                     continue;
 
-                var node = button->Component->UldManager.NodeList[2];
+                var node = AtkHelpers.GetNodeSafe(&button->Component->UldManager, 2);
                 if (node == null)
                     continue;
 
@@ -162,7 +167,10 @@ public partial class TimerManager
             var change = false;
             for (var i = 8; i < 8 + WheelInfo.MaxSlots; ++i)
             {
-                var button = (AtkComponentNode*)wheel->UldManager.NodeList[i];
+                // 🔴 同 ActiveWheelSlot：缺的是最外面那一層 —— NodeList 這個指標欄位本身。
+                // 版面拆除時它先被釋放設成 null，而 NodeListCount 不保證同時歸零；
+                // 那一瞬間 NodeList[i] 讀的是位址 i*8，上界與元素判空兩關都會放行。
+                var button = (AtkComponentNode*)AtkHelpers.GetNodeSafe(&wheel->UldManager, i);
                 // AtkComponentNode.Component 是偏移 0xB0 的指標欄位，節點還在建的時候可能還沒接上；
                 // 少了這一關，下面那個看起來很像守衛的 NodeListCount 比對其實是對位址 0xB0+n 解參考。
                 if (button == null || button->Component == null || button->Component->UldManager.NodeListCount < 10)
@@ -173,8 +181,8 @@ public partial class TimerManager
 
                 // 上面的 NodeListCount < 10 已經涵蓋索引 5／8／9 的上界，但**元素本身仍可為 null**
                 // （上界檢查與元素判空是兩件事，只做一半就是半套邊界檢查）。
-                var nodes = button->Component->UldManager.NodeList;
-                var text  = nodes[5];
+                var nodeUld = &button->Component->UldManager;
+                var text    = AtkHelpers.GetNodeSafe(nodeUld, 5);
                 if (text == null)
                     continue;
 
@@ -188,8 +196,8 @@ public partial class TimerManager
                 {
                     // 🔴 fillNode／nameNode 任一取不到就跳過這一格（每幀輪詢⇒安靜跳過、不寫 log）。
                     // 跳過是 fail-closed：寧可這一幀不更新，也不要拿殘缺的資料覆寫既有紀錄。
-                    var fillNode = nodes[8];
-                    var nameNode = (AtkTextNode*)nodes[9];
+                    var fillNode = AtkHelpers.GetNodeSafe(nodeUld, 8);
+                    var nameNode = (AtkTextNode*)AtkHelpers.GetNodeSafe(nodeUld, 9);
                     if (fillNode == null || nameNode == null)
                         continue;
 

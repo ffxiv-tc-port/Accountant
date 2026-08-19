@@ -29,4 +29,31 @@ public static class Helpers
         => node != null && node->AtkResNode.Type == NodeType.Text
             ? MemoryHelper.ReadSeString(&node->NodeText)
             : SeString.Empty;
+
+    /// <summary>
+    /// 從 <paramref name="uld"/> 的 <c>NodeList</c> 取第 <paramref name="index"/> 個節點；
+    /// 取不到回 <c>null</c>。
+    /// </summary>
+    /// <remarks>
+    /// 🔴 <c>NodeList</c> 要驗的是<b>三件事</b>，這個 repo 原本只做到後兩件：
+    /// <list type="number">
+    /// <item><b><c>NodeList</c> 這個指標欄位本身</b>：版面拆除時它會先被釋放並設成
+    /// <c>null</c>，而 <c>NodeListCount</c> 不保證同時歸零。那一瞬間 <c>NodeList[i]</c>
+    /// 讀的是位址 <c>i*8</c>，不是 <c>null</c> —— 上界檢查與元素判空<b>兩關都會放行</b>，
+    /// 拿到的是垃圾指標。</item>
+    /// <item><b>上界</b>：版面還在建的時候 <c>NodeListCount</c> 可能小於索引，
+    /// 越界讀到的是<b>相鄰記憶體而不是 <c>null</c></b>，元素判空擋不住。</item>
+    /// <item><b>元素本身</b>：即使索引在範圍內，<c>NodeList[i]</c> 仍可能是 <c>null</c>。</item>
+    /// </list>
+    /// 三件事一起做才是完整的守衛；少做任何一件，失敗形式都一樣是靜默拿到垃圾指標。
+    /// </remarks>
+    public static unsafe AtkResNode* GetNodeSafe(AtkUldManager* uld, int index)
+    {
+        if (uld == null || uld->NodeList == null)
+            return null;
+        if (index < 0 || index >= uld->NodeListCount)
+            return null;
+
+        return uld->NodeList[index];
+    }
 }

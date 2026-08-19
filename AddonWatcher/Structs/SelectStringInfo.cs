@@ -73,11 +73,14 @@ public unsafe struct SelectStringInfo
     {
         get
         {
-            var count = Pointer->AtkUnitBase.UldManager.NodeListCount;
-            if (DescriptionNodeIdx >= count)
+            // 🔴 原本只驗了 NodeListCount 上界與元素判空，少的是最外面那一層：
+            // NodeList 這個指標欄位本身。版面拆除時它先被釋放設成 null，而 NodeListCount
+            // 不保證同時歸零 —— 那一瞬間 NodeList[idx] 讀的是位址 idx*8，上面兩關都會放行。
+            // Helpers.GetNodeSafe 三件事一起做（那裡有完整說明）。
+            if (Pointer == null)
                 return SeString.Empty;
 
-            var node = Pointer->AtkUnitBase.UldManager.NodeList[DescriptionNodeIdx];
+            var node = Helpers.GetNodeSafe(&Pointer->AtkUnitBase.UldManager, DescriptionNodeIdx);
             if (node == null)
                 return SeString.Empty;
 
