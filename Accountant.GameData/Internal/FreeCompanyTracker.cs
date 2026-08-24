@@ -8,6 +8,7 @@ namespace Accountant.Internal;
 internal class FreeCompanyTracker
 {
     private readonly IClientState _state;
+    private readonly IObjectTable _objects;
     private readonly IFramework   _framework;
     private readonly IntPtr       _fcStatePtr  = IntPtr.Zero;
     private readonly IntPtr       _fcNamePtr   = IntPtr.Zero;
@@ -39,11 +40,11 @@ internal class FreeCompanyTracker
 
     private void Update()
     {
-        if (_state is { IsLoggedIn: true, LocalPlayer: not null })
+        if (_state.IsLoggedIn && _objects.LocalPlayer is { } localPlayer)
         {
-            var newName   = _state.LocalPlayer.Name.TextValue;
-            var newTag    = _state.LocalPlayer.CompanyTag.TextValue;
-            var newServer = _state.LocalPlayer.HomeWorld.RowId;
+            var newName   = localPlayer.Name.TextValue;
+            var newTag    = localPlayer.CompanyTag.TextValue;
+            var newServer = localPlayer.HomeWorld.RowId;
             if (_characterName != newName || _freeCompanyTag != newTag || newServer != _serverId)
             {
                 _freeCompanyName   = null;
@@ -106,9 +107,10 @@ internal class FreeCompanyTracker
         return data;
     }
 
-    public FreeCompanyTracker(IPluginLog log, IGameGui gui, IClientState state, IFramework framework)
+    public FreeCompanyTracker(IPluginLog log, IGameGui gui, IClientState state, IObjectTable objects, IFramework framework)
     {
         _state     = state;
+        _objects   = objects;
         _framework = framework;
         var fcData = GetDataPointer(log, gui);
         if (fcData != IntPtr.Zero)
@@ -132,7 +134,7 @@ internal class FreeCompanyTracker
 
     private void UpdateAndRemove(IFramework _)
     {
-        if (_state.LocalPlayer == null)
+        if (_objects.LocalPlayer == null)
             return;
 
         Update();
