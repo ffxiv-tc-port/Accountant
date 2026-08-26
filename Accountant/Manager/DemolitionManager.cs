@@ -44,7 +44,7 @@ public class DemolitionManager : IDisposable
     public PlotInfo CurrentPlot
         => new(Interop.PositionInfo.Zone, Interop.PositionInfo.Ward,
             InsideHouse(_clientState.TerritoryType) ? Interop.PositionInfo.House : Interop.PositionInfo.Plot,
-            (ushort)(_clientState.LocalPlayer?.CurrentWorld.RowId ?? 0));
+            (ushort)(_objects.LocalPlayer?.CurrentWorld.RowId ?? 0));
 
     public DemolitionManager(AccountantConfiguration config, IDalamudPluginInterface pluginInterface, IClientState clientState,
         IFramework framework, IObjectTable objects)
@@ -370,7 +370,7 @@ public class DemolitionManager : IDisposable
 
     private void OnFramework(IFramework framework)
     {
-        if (_clientState.LocalPlayer is not { } player)
+        if (_objects.LocalPlayer is not { } player)
             return;
 
         var plotInfo = new PlotInfo(Interop.PositionInfo.Zone, Interop.PositionInfo.Ward, Interop.PositionInfo.House,

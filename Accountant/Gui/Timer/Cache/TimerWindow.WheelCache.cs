@@ -48,6 +48,7 @@ public partial class TimerWindow
             };
             Objects.AddRange(wheels
                 .Where(w => w.ItemId != 0)
+                .Where(w => !Accountant.Config.OnlyGrade3Wheels || w.Grade >= 3)
                 .Select(w => GenerateWheel(w, ref local))
                 .OrderByDescending(r => Accountant.Config.GetPriority(r.Name)));
             newObject.ObjectsCount = Objects.Count - newObject.ObjectsBegin;

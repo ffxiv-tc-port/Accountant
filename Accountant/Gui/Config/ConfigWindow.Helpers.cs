@@ -90,9 +90,9 @@ public partial class ConfigWindow
         using var _ = ImGuiRaii.PushId(id);
 
         var newPlot = PlotInfo.FromValue(plotInfo);
-        if (newPlot.ServerId == 0 && Dalamud.ClientState.LocalPlayer != null)
+        if (newPlot.ServerId == 0 && Dalamud.Objects.LocalPlayer != null)
         {
-            newPlot  = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.ClientState.LocalPlayer.CurrentWorld.RowId);
+            newPlot  = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.Objects.LocalPlayer.CurrentWorld.RowId);
             plotInfo = newPlot.Value;
         }
 

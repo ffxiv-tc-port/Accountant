@@ -62,27 +62,29 @@ public partial class ConfigWindow
         ImGuiComponents.HelpMarker(Loc.T(
             "The name entered here will replace all occurrences of the plot in the timer window.\n\nThe timer limit will show this house as due to be demolished in the timer window when the configured number of days passed since your last visit.\n\nThe warning timer limit will show notifications on the bottom right when the configured number of days passed since your last visit.\n\nYou need to manually add players that reset the timer when encountered within the house, otherwise the timer will not update."));
 
+        // DragInt 在拖曳中每跨過一個整數就回傳 true，所以存檔要延到放手時才做一次
+        // （同 ConfigWindow.General.cs 的作法）。數值本身仍即時套用。
         var tmpDays = (int)data.DisplayFrom;
         if (ImGui.DragInt(Loc.T("Show in Timers"), ref tmpDays, 0.1f, 0, DemolitionManager.DefaultDisplayMax, Loc.T("%i Days Since Visit")))
         {
             tmpDays = Math.Clamp(tmpDays, 0, DemolitionManager.DefaultDisplayMax);
             if (tmpDays != data.DisplayFrom)
-            {
                 data.DisplayFrom = (byte)tmpDays;
-                _demoManager.Save();
-            }
         }
+
+        if (ImGui.IsItemDeactivatedAfterEdit())
+            _demoManager.Save();
 
         tmpDays = data.DisplayWarningFrom;
         if (ImGui.DragInt(Loc.T("Show Warnings"), ref tmpDays, 0.1f, 0, DemolitionManager.DefaultDisplayMax, Loc.T("%i Days Since Visit")))
         {
             tmpDays = Math.Clamp(tmpDays, 0, DemolitionManager.DefaultDisplayMax);
             if (tmpDays != data.DisplayWarningFrom)
-            {
                 data.DisplayWarningFrom = (byte)tmpDays;
-                _demoManager.Save();
-            }
         }
+
+        if (ImGui.IsItemDeactivatedAfterEdit())
+            _demoManager.Save();
 
         var ctrl = ImGui.GetIO().KeyCtrl;
         var text = data.LastVisitDays switch
@@ -105,8 +107,8 @@ public partial class ConfigWindow
 
         ImGui.InputTextWithHint("##PlayerName", Loc.T("New Player Name..."), ref _newPlayerName, 40);
         ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
-        if (_newWorldId == 0 && Dalamud.ClientState.LocalPlayer is not null)
-            _newWorldId = (ushort)Dalamud.ClientState.LocalPlayer.HomeWorld.RowId;
+        if (_newWorldId == 0 && Dalamud.Objects.LocalPlayer is not null)
+            _newWorldId = (ushort)Dalamud.Objects.LocalPlayer.HomeWorld.RowId;
         DrawWorldsCombo(ref _newWorldId);
 
 
@@ -126,12 +128,12 @@ public partial class ConfigWindow
 
         ImGui.SameLine();
 
-        using (ImRaii.Disabled(Dalamud.ClientState.LocalPlayer == null
-                || data.CheckedPlayers.Contains(new PlayerInfo(Dalamud.ClientState.LocalPlayer))))
+        using (ImRaii.Disabled(Dalamud.Objects.LocalPlayer == null
+                || data.CheckedPlayers.Contains(new PlayerInfo(Dalamud.Objects.LocalPlayer))))
         {
             if (ImGui.Button(Loc.T("Add Current Player")))
             {
-                data.CheckedPlayers.Add(new PlayerInfo(Dalamud.ClientState.LocalPlayer!));
+                data.CheckedPlayers.Add(new PlayerInfo(Dalamud.Objects.LocalPlayer!));
                 _demoManager.Save();
             }
         }
@@ -192,9 +194,9 @@ public partial class ConfigWindow
         }
 
         var newPlot = PlotInfo.FromValue(_newPlotInfo);
-        if (newPlot.ServerId == 0 && Dalamud.ClientState.LocalPlayer != null)
+        if (newPlot.ServerId == 0 && Dalamud.Objects.LocalPlayer != null)
         {
-            newPlot      = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.ClientState.LocalPlayer.CurrentWorld.RowId);
+            newPlot      = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.Objects.LocalPlayer.CurrentWorld.RowId);
             _newPlotInfo = newPlot.Value;
         }
 

@@ -8,6 +8,7 @@ namespace Accountant.Internal;
 internal class FreeCompanyTracker
 {
     private readonly IClientState _state;
+    private readonly IObjectTable _objects;
     private readonly IFramework   _framework;
     private readonly IntPtr       _fcStatePtr  = IntPtr.Zero;
     private readonly IntPtr       _fcNamePtr   = IntPtr.Zero;
@@ -39,11 +40,11 @@ internal class FreeCompanyTracker
 
     private void Update()
     {
-        if (_state is { IsLoggedIn: true, LocalPlayer: not null })
+        if (_state.IsLoggedIn && _objects.LocalPlayer is { } localPlayer)
         {
-            var newName   = _state.LocalPlayer.Name.TextValue;
-            var newTag    = _state.LocalPlayer.CompanyTag.TextValue;
-            var newServer = _state.LocalPlayer.HomeWorld.RowId;
+            var newName   = localPlayer.Name.TextValue;
+            var newTag    = localPlayer.CompanyTag.TextValue;
+            var newServer = localPlayer.HomeWorld.RowId;
             if (_characterName != newName || _freeCompanyTag != newTag || newServer != _serverId)
             {
                 _freeCompanyName   = null;
@@ -75,19 +76,41 @@ internal class FreeCompanyTracker
     private static unsafe IntPtr GetDataPointer(IPluginLog log, IGameGui gui)
     {
         var uiModule = gui.GetUIModule();
-        var vf34     = (IntPtr*)(*(ulong*)uiModule.Address + 8 * Offsets.FreeCompany.FreeCompanyModuleVfunc);
+
+        // 🔴 `gui.GetUIModule()` 是 Dalamud 的服務包裝（UIModulePtr），包的就是
+        // `(nint)UIModule.Instance()` —— **`.Address` 合法為 0**（UIModule.Instance() 內部是
+        // `Framework.Instance() == null ? null : ...`）。原本直接 `*(ulong*)uiModule.Address`
+        // 讀 vtable 指標，Address 為 0 時就是 AccessViolationException，
+        // 而 AVE 是 corrupted-state exception，呼叫端任何 try/catch 都攔不到。
+        if (uiModule.Address == IntPtr.Zero)
+        {
+            log.Error("Could not obtain free company data: UIModule is not available yet.");
+            return IntPtr.Zero;
+        }
+
+        var vf34 = (IntPtr*)(*(ulong*)uiModule.Address + 8 * Offsets.FreeCompany.FreeCompanyModuleVfunc);
         log.Verbose($"Obtained free company data module getter (VFunc 34 of uiModule) at 0x{(ulong)vf34:X16}.");
         var module = ((delegate*<IntPtr, IntPtr>)*vf34)(uiModule);
         log.Verbose($"Obtained free company data module at 0x{module:X16}.");
+
+        // 同一條鏈的第二跳：vfunc 取不到自由部隊模組時回 null，
+        // `*(IntPtr*)(0 + DataOffset)` 一樣是 AVE。
+        if (module == IntPtr.Zero)
+        {
+            log.Error("Could not obtain free company data: free company module is null.");
+            return IntPtr.Zero;
+        }
+
         var data = *(IntPtr*)(module + Offsets.FreeCompany.DataOffset);
         if (data == IntPtr.Zero)
             log.Error("Could not obtain free company data.");
         return data;
     }
 
-    public FreeCompanyTracker(IPluginLog log, IGameGui gui, IClientState state, IFramework framework)
+    public FreeCompanyTracker(IPluginLog log, IGameGui gui, IClientState state, IObjectTable objects, IFramework framework)
     {
         _state     = state;
+        _objects   = objects;
         _framework = framework;
         var fcData = GetDataPointer(log, gui);
         if (fcData != IntPtr.Zero)
@@ -111,7 +134,7 @@ internal class FreeCompanyTracker
 
     private void UpdateAndRemove(IFramework _)
     {
-        if (_state.LocalPlayer == null)
+        if (_objects.LocalPlayer == null)
             return;
 
         Update();

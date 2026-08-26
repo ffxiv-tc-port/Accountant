@@ -10,7 +10,7 @@ internal partial class AddonWatcherBase
 {
     private void SelectYesnoOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
-        SelectYesnoSetupHook!.Original(unit, _, data);
+        SelectYesnoSetupHook!.OriginalDisposeSafe(unit, _, data);
         var description = Dalamud.Memory.MemoryHelper.ReadSeStringNullTerminated(data + 0x08);
         var yes         = Dalamud.Memory.MemoryHelper.ReadSeStringNullTerminated(data + 0x18);
         var no          = Dalamud.Memory.MemoryHelper.ReadSeStringNullTerminated(data + 0x28);
@@ -21,7 +21,7 @@ internal partial class AddonWatcherBase
 
     private void SelectStringOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
-        SelectStringSetupHook!.Original(unit, _, data);
+        SelectStringSetupHook!.OriginalDisposeSafe(unit, _, data);
         var ptr         = (SelectStringInfo)unit;
         var description = ptr.Description;
         var options     = Enumerable.Range(0, ptr.Count).Select(i => ptr.ItemText(i)).ToArray();
@@ -32,7 +32,7 @@ internal partial class AddonWatcherBase
 
     private void JournalResultOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
-        JournalResultSetupHook!.Original(unit, _, data);
+        JournalResultSetupHook!.OriginalDisposeSafe(unit, _, data);
         var ptr       = (JournalResultInfo)unit;
         var questName = ptr.QuestName;
         _log.Verbose("JournalResult 0x{JournalResultPtr:X} setup for quest {QuestName}.", (ulong)unit, questName);
@@ -41,7 +41,7 @@ internal partial class AddonWatcherBase
 
     private void LotteryWeeklyRewardListOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
-        LotteryWeeklyRewardListSetupHook!.Original(unit, _, data);
+        LotteryWeeklyRewardListSetupHook!.OriginalDisposeSafe(unit, _, data);
         _log.Verbose("LotteryWeeklyRewardList 0x{LotteryWeeklyRewardListPtr:X} setup.", (ulong)unit);
         LotteryWeeklyRewardListSetup?.Invoke(unit);
     }
@@ -79,7 +79,7 @@ internal partial class AddonWatcherBase
             }
         }
 
-        SelectYesNoHook!.Original(atkUnit, eventType, which, source, data);
+        SelectYesNoHook!.OriginalDisposeSafe(atkUnit, eventType, which, source, data);
         deferred?.Invoke();
     }
 
@@ -108,14 +108,14 @@ internal partial class AddonWatcherBase
             }
         }
 
-        SelectStringHook!.Original(atkUnit, eventType, which, source, data);
+        SelectStringHook!.OriginalDisposeSafe(atkUnit, eventType, which, source, data);
         deferred?.Invoke();
     }
 
 
     private void TalkUpdateDetour(IntPtr unit, IntPtr data)
     {
-        TalkUpdateHook!.Original(unit, data);
+        TalkUpdateHook!.OriginalDisposeSafe(unit, data);
         var ptr     = (TalkInfo)unit;
         var speaker = ptr.Speaker;
         var text    = ptr.Text;

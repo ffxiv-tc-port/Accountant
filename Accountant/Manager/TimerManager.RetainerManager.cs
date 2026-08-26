@@ -69,7 +69,7 @@ public partial class TimerManager
 
         private unsafe void UpdateRetainers()
         {
-            if (Dalamud.ClientState.LocalPlayer == null)
+            if (Dalamud.Objects.LocalPlayer == null)
                 return;
 
             var manager = FFXIVClientStructs.FFXIV.Client.Game.RetainerManager.Instance();
@@ -77,13 +77,13 @@ public partial class TimerManager
                 return;
 
             var retainerList = manager->Retainers;
-            var info         = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
+            var info         = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
             var count        = manager->GetRetainerCount();
             var changes      = false;
 
             AutoRetainerOfflineCharacterData? autoRetainerData = null;
             if (AutoRetainerIpc.IsReady())
-                autoRetainerData = AutoRetainerIpc.GetOfflineCharacterData(Dalamud.ClientState.LocalContentId);
+                autoRetainerData = AutoRetainerIpc.GetOfflineCharacterData(Dalamud.PlayerState.ContentId);
 
             for (byte i = 0; i < count; ++i)
             {

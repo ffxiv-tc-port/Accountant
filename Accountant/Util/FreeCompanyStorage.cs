@@ -27,15 +27,15 @@ public class FreeCompanyStorage
         if (!Accountant.GameData.Valid)
             return null;
 
-        if (Dalamud.ClientState.LocalPlayer == null)
+        if (Dalamud.Objects.LocalPlayer == null)
             return null;
 
         var (tag, name, leader) = Accountant.GameData.FreeCompanyInfo();
-        var id      = (ushort)Dalamud.ClientState.LocalPlayer.HomeWorld.RowId;
+        var id      = (ushort)Dalamud.Objects.LocalPlayer.HomeWorld.RowId;
         var company = FindByAndUpdateInfo(tag, name, leader, id);
         if (company.HasValue)
         {
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer);
             if (!CharacterCompanies.TryGetValue(player.CastedName, out var known) || known != company.Value.CastedName)
             {
                 CharacterCompanies[player.CastedName] = company.Value.CastedName;

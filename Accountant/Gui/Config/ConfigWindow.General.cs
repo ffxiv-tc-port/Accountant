@@ -62,6 +62,13 @@ public partial class ConfigWindow
         ImGuiRaii.ConfigCheckmark(Loc.T("Enable Airship Timers"),         Accountant.Config.EnableAirships,     EnableAirships);
         ImGuiRaii.ConfigCheckmark(Loc.T("Enable Submersible Timers"),     Accountant.Config.EnableSubmersibles, EnableSubmersibles);
         ImGuiRaii.ConfigCheckmark(Loc.T("Enable Aetherial Wheel Timers"), Accountant.Config.EnableWheels,       EnableWheels);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Only Track Grade 3 Wheels"), Accountant.Config.OnlyGrade3Wheels,
+            b =>
+            {
+                Accountant.Config.OnlyGrade3Wheels = b;
+                Accountant.Config.Save();
+            });
+        ImGuiRaii.HoverTooltip(Loc.T("Hide grade 1 and 2 aetherial wheels from the timers."));
         ImGui.NewLine();
         ImGuiRaii.ConfigCheckmark(Loc.T("Enable Crop Timers"),        Accountant.Config.EnableCrops, EnableCrops);
         ImGuiRaii.ConfigCheckmark(Loc.T("Ignore Indoor Plot Plants"), Accountant.Config.IgnoreIndoorPlants, IgnoreIndoorPlants);

@@ -33,7 +33,9 @@ internal static class Localization
 
     private static StringParser PatchParser(ClientLanguage lang)
     {
-        if (lang is ClientLanguage.ChineseSimplified or ClientLanguage.ChineseTraditional)
+        // TC(台服)客戶端在 Dalamud 13.0.0.16 之後回報 ClientLanguage 7(TraditionalChinese),
+        // 舊版回報 4(ChineseSimplified)。用數值比較才能同時相容 CI 釘的 13.0.0.6(列舉沒有 7 這個名字)與執行期新版。
+        if ((int)lang is 4 or 5 or 7)
         {
             IList<string> ZhFunc(string s)
             {

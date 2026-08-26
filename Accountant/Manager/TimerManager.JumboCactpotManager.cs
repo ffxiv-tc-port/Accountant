@@ -74,7 +74,7 @@ public partial class TimerManager
 
         private void RewardSetupDetour(IntPtr _)
         {
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
             if (_tasks.ClearFirstJumbo(player))
                 _tasks.Save(player);
         }
@@ -99,12 +99,12 @@ public partial class TimerManager
                 tickets[i] = ticket;
             }
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
             if (statePtr[0] == 2)
                 jumbo.LastUpdate = jumbo.NextReset(player.ServerId).AddDays(-7);
             if (_tasks.AddOrUpdateJumboCactpot(player, jumbo))
                 _tasks.Save(player);
-            _goldSaucerUpdateHook!.Original(_, packet);
+            _goldSaucerUpdateHook!.OriginalDisposeSafe(_, packet);
         }
 
         private void TicketBought(IntPtr _, bool which, SeString button, SeString description)
@@ -122,7 +122,7 @@ public partial class TimerManager
             if (!ushort.TryParse(numbers[0], out var ticket) || ticket >= 10000)
                 return;
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
             if (_tasks.AddOrUpdateJumbo(player, ticket))
                 _tasks.Save(player);
         }
