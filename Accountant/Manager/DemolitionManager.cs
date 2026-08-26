@@ -118,6 +118,98 @@ public class DemolitionManager : IDisposable
         Change?.Invoke();
     }
 
+    private bool _reloadingAsync;
+
+    // Same rationale as TimersBase.ReloadAsync(): used only by ConfigSync's periodic
+    // external-change check (e.g. a sibling multiboxed instance writing to the same shared config
+    // folder). The file I/O + JSON parsing (mirrors the file-parsing half of Load(), minus the
+    // config-merge tail which only applies to the startup load) happens on a background thread
+    // into a local dictionary; Data is only mutated on the framework thread afterwards so nothing
+    // reading it concurrently sees a torn state.
+    public void ReloadAsync(Action? onReloaded = null)
+    {
+        if (_reloadingAsync)
+            return;
+        _reloadingAsync = true;
+
+        Task.Run(() =>
+        {
+            var loaded         = new Dictionary<PlotInfo, DemolitionInfo>();
+            var lastChangeTime = File.Exists(_filePath) ? File.GetLastWriteTimeUtc(_filePath) : DateTime.UtcNow;
+
+            if (File.Exists(_filePath))
+                try
+                {
+                    var text = File.ReadAllText(_filePath);
+                    var obj  = JObject.Parse(text);
+                    foreach (var (key, token) in obj)
+                    {
+                        if (!ulong.TryParse(key, out var keyValue))
+                        {
+                            Dalamud.Log.Warning($"Invalid key {key} in demolition manager. Skipped.");
+                            continue;
+                        }
+
+                        var plotInfo = PlotInfo.FromValue(keyValue);
+                        if (!plotInfo.Valid())
+                        {
+                            Dalamud.Log.Warning($"Invalid plot info {plotInfo} in demolition manager. Skipped.");
+                            continue;
+                        }
+
+                        if (token is not JObject demoObj)
+                        {
+                            Dalamud.Log.Warning($"Invalid data for {plotInfo} in demolition manager. Skipped.");
+                            continue;
+                        }
+
+                        var demo = new DemolitionInfo
+                        {
+                            DisplayFrom        = demoObj[nameof(DemolitionInfo.DisplayFrom)]?.ToObject<byte>() ?? DefaultDisplayFrom,
+                            DisplayWarningFrom = demoObj[nameof(DemolitionInfo.DisplayWarningFrom)]?.ToObject<byte>() ?? DefaultDisplayWarningFrom,
+                            Tracked            = demoObj[nameof(DemolitionInfo.Tracked)]?.ToObject<bool>() ?? true,
+                            Name               = demoObj[nameof(DemolitionInfo.Name)]?.ToObject<string>() ?? string.Empty,
+                        };
+                        demo.DisplayFrom        = Math.Clamp(demo.DisplayFrom,        (byte)0, DefaultDisplayMax);
+                        demo.DisplayWarningFrom = Math.Clamp(demo.DisplayWarningFrom, (byte)0, DefaultDisplayMax);
+
+                        if (demoObj[nameof(DemolitionInfo.LastVisit)]?.ToObject<long>() is not { } lastVisitTimeStamp)
+                        {
+                            Dalamud.Log.Warning($"No data for {plotInfo}'s last visit for demolition tracking. Set to warning time.");
+                            demo.LastVisit = DateTime.UtcNow.AddDays(demo.DisplayWarningFrom);
+                        }
+                        else
+                        {
+                            demo.LastVisit = DateTimeOffset.FromUnixTimeMilliseconds(lastVisitTimeStamp).DateTime;
+                        }
+
+                        if (demoObj[nameof(DemolitionInfo.CheckedPlayers)]?.ToObject<string[]>() is { } players)
+                            foreach (var player in players)
+                                demo.CheckedPlayers.Add(PlayerInfo.FromCastedName(player));
+
+                        if (!loaded.TryAdd(plotInfo, demo))
+                            Dalamud.Log.Warning($"Could not add {plotInfo} to demolition tracking.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dalamud.Log.Error($"Unknown error loading demolition manager:\n{ex}");
+                }
+
+            Dalamud.Framework.RunOnFrameworkThread(() =>
+            {
+                Data.Clear();
+                foreach (var (plot, demo) in loaded)
+                    Data[plot] = demo;
+
+                LastChangeTime = lastChangeTime;
+                Change?.Invoke();
+                onReloaded?.Invoke();
+                _reloadingAsync = false;
+            });
+        });
+    }
+
     internal void Test()
     {
         var plotInfo = new PlotInfo(InternalHousingZone.Mist, 1, 1, (ushort)Accountant.GameData.Worlds().First().Id);
