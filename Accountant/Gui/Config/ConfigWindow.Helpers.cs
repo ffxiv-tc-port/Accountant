@@ -4,7 +4,7 @@ using Accountant.Classes;
 using Accountant.Enums;
 using Accountant.Gui.Helper;
 using Dalamud.Interface.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace Accountant.Gui.Config;
 

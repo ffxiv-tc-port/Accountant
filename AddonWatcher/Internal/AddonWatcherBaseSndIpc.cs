@@ -62,7 +62,7 @@ internal partial class AddonWatcherBase
 
     private unsafe void OnSndCallbackFired(string addonName, int index, bool updateState)
     {
-        var addon = _gui.GetAddonByName(addonName, 1);
+        var addon = _gui.GetAddonByName(addonName, 1).Address;
         if (addon == nint.Zero || !ShouldReport(addon, index))
             return;
 
