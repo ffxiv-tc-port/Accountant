@@ -26,6 +26,17 @@ public partial class TimerManager
         private ushort _lastPatch = ushort.MaxValue;
         private ushort _lastBed   = ushort.MaxValue;
 
+        // Fertilizing can silently fail (crop already fully fertilized), which is only
+        // reported via a follow-up Talk message, so the timer update is deferred until
+        // we know whether that failure message appears.
+        private (CropSpotIdentification Id, uint ItemId)? _pendingFertilize;
+
+        // By the time the planting Yes/No confirmation shows, the game's current target has
+        // already been cleared (e.g. lost while the seed-selection UI was open), so
+        // IdentifyCropSpot() would fail there for target-based (House/private) spots. Captured
+        // instead at the moment "Sow" is selected, while the target is still valid.
+        private CropSpotIdentification? _pendingPlantSpot;
+
         private readonly PlotCropTimers    _plotCrops;
         private readonly PrivateCropTimers _privateCrops;
 
@@ -59,11 +70,13 @@ public partial class TimerManager
             _watcher.SubscribeTalkUpdate(CheckPlant);
             _watcher.SubscribeStringSelected(SelectStringEventDetour);
             _watcher.SubscribeYesnoSelected(SelectYesnoEventDetour);
+            Dalamud.Chat.ChatMessage += OnChatMessage;
             _state = true;
         }
 
         private void Disable()
         {
+            Dalamud.Chat.ChatMessage -= OnChatMessage;
             _watcher.UnsubscribeYesnoSelected(SelectYesnoEventDetour);
             _watcher.UnsubscribeStringSelected(SelectStringEventDetour);
             _watcher.UnsubscribeTalkUpdate(CheckPlant);
@@ -73,8 +86,121 @@ public partial class TimerManager
         public void Dispose()
             => Disable();
 
+        private static bool IsAlreadyFertilizedMessage(SeString text)
+            => text.TextValue.Contains("已經施加了足夠的肥料了");
+
+        private static bool IsOutOfFertilizerMessage(SeString text)
+            => text.TextValue.Contains("沒有肥料");
+
+        private static bool IsFertilizeFailureMessage(SeString text)
+            => IsAlreadyFertilizedMessage(text) || IsOutOfFertilizerMessage(text);
+
+        private static bool IsFertilizeSuccessMessage(SeString text)
+            => text.TextValue.Contains("施加了肥料");
+
+        private void ApplyFertilize(CropSpotIdentification id, uint itemId)
+        {
+            switch (id.Type)
+            {
+                case CropSpotType.Apartment:
+                case CropSpotType.Chambers:
+                    _privateCrops.FertilizeCrop(id, itemId, DateTime.UtcNow);
+                    break;
+                case CropSpotType.Outdoors:
+                case CropSpotType.House:
+                    _plotCrops.FertilizeCrop(id, itemId, DateTime.UtcNow);
+                    break;
+            }
+        }
+
+        // Even when fertilizing fails outright, we already know the crop's identity from the
+        // status message that preceded it - so register it (if not already tracked) without
+        // applying any fertilize-time bonus, letting untracked crops get picked up this way.
+        // Using TendCrop (rather than a bare identity-only update) also gives it an approximate
+        // planted time (the tend timestamp), since an identity-only registration with no time at
+        // all displays as a bogus "already finished" (PlantTime defaults to DateTime.MinValue).
+        private void IdentifyOnly(CropSpotIdentification id, uint itemId)
+        {
+            switch (id.Type)
+            {
+                case CropSpotType.Apartment:
+                case CropSpotType.Chambers:
+                    _privateCrops.TendCrop(id, itemId, DateTime.UtcNow);
+                    break;
+                case CropSpotType.Outdoors:
+                case CropSpotType.House:
+                    _plotCrops.TendCrop(id, itemId, DateTime.UtcNow);
+                    break;
+            }
+        }
+
+        private void MarkAlreadyFertilized(CropSpotIdentification id)
+        {
+            switch (id.Type)
+            {
+                case CropSpotType.Apartment:
+                case CropSpotType.Chambers:
+                    _privateCrops.MarkAlreadyFertilized(id, DateTime.UtcNow);
+                    break;
+                case CropSpotType.Outdoors:
+                case CropSpotType.House:
+                    _plotCrops.MarkAlreadyFertilized(id, DateTime.UtcNow);
+                    break;
+            }
+        }
+
+        private void HandleFertilizeFailure(SeString text, CropSpotIdentification id, uint itemId)
+        {
+            IdentifyOnly(id, itemId);
+            // "Already fully fertilized" confirms the crop is currently up to date - unlike
+            // "out of fertilizer", which says nothing about the crop itself.
+            if (IsAlreadyFertilizedMessage(text))
+                MarkAlreadyFertilized(id);
+        }
+
+        // Flower pot fertilize outcomes (unlike outdoor garden bed ones) are not shown via the
+        // Talk addon at all - only in the chat log - so they need their own separate listener.
+        private void OnChatMessage(global::Dalamud.Game.Text.XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
+        {
+            if (!_pendingFertilize.HasValue)
+                return;
+
+            if (IsFertilizeFailureMessage(message))
+            {
+                var pending = _pendingFertilize.Value;
+                _pendingFertilize = null;
+                HandleFertilizeFailure(message, pending.Id, pending.ItemId);
+            }
+            else if (IsFertilizeSuccessMessage(message))
+            {
+                var pending = _pendingFertilize.Value;
+                _pendingFertilize = null;
+                ApplyFertilize(pending.Id, pending.ItemId);
+            }
+        }
+
         private void CheckPlant(IntPtr talkPtr, SeString text, SeString speaker)
         {
+            if (_pendingFertilize.HasValue)
+            {
+                if (IsFertilizeFailureMessage(text))
+                {
+                    // Fertilizing failed (already fully fertilized, out of fertilizer, etc.) -
+                    // don't count it, but still register the crop's identity if it wasn't tracked yet.
+                    var pending = _pendingFertilize.Value;
+                    _pendingFertilize = null;
+                    HandleFertilizeFailure(text, pending.Id, pending.ItemId);
+                }
+                else if (IsFertilizeSuccessMessage(text))
+                {
+                    var pending = _pendingFertilize.Value;
+                    _pendingFertilize = null;
+                    ApplyFertilize(pending.Id, pending.ItemId);
+                }
+                // Otherwise this is an unrelated Talk message (e.g. ambient dialogue) - keep
+                // waiting for the actual fertilize outcome instead of guessing from its absence.
+            }
+
             if (!StringId.CropDoingWell.Match(text) && !StringId.CropBetterDays.Match(text))
                 return;
 
@@ -221,6 +347,7 @@ public partial class TimerManager
             if (text.StartsWith(StringId.DisposeCrop.Value()))
             {
                 var id = IdentifyCropSpot();
+                Dalamud.Log.Debug($"HarvestCrop (Yesno): yesOrNo={yesOrNo}, type={id.Type}, position={id.Position}");
                 switch (id.Type)
                 {
                     case CropSpotType.Apartment:
@@ -235,11 +362,19 @@ public partial class TimerManager
             }
             else
             {
+                var pendingSpot   = _pendingPlantSpot;
+                _pendingPlantSpot = null;
+                if (!yesOrNo)
+                    return;
+
                 var itemId = GetCropData(text).Item.RowId;
                 if (itemId == 0)
                     return;
 
-                var id = IdentifyCropSpot();
+                // Prefer the spot captured when "Sow" was selected - by the time this Yes/No
+                // confirmation shows, the game's current target (needed for House/private spots)
+                // may already be gone.
+                var id = pendingSpot ?? IdentifyCropSpot();
                 switch (id.Type)
                 {
                     case CropSpotType.Apartment:
@@ -258,6 +393,7 @@ public partial class TimerManager
         {
             SetPatch(descriptionText);
             var id = IdentifyCropSpot();
+            Dalamud.Log.Debug($"HarvestCrop (String): type={id.Type}, position={id.Position}");
             switch (id.Type)
             {
                 case CropSpotType.Apartment:
@@ -288,6 +424,19 @@ public partial class TimerManager
             }
         }
 
+        private void FertilizeCrop(SeString descriptionText)
+        {
+            SetPatch(descriptionText);
+            var id = IdentifyCropSpot();
+            var itemId = _gameData.FindCrop(_lastPlant).Item.RowId;
+            if (id.Type == CropSpotType.Invalid)
+                return;
+
+            // Deferred: fertilizing can fail silently, only reported by a follow-up
+            // Talk message, so we do not know yet whether this actually took effect.
+            _pendingFertilize = (id, itemId);
+        }
+
         private void SelectStringEventDetour(IntPtr unit, int which, SeString buttonText, SeString descriptionText)
         {
             switch (which)
@@ -301,6 +450,8 @@ public partial class TimerManager
                     else if (StringId.PlantCrop.Match(buttonText))
                     {
                         SetPatch(descriptionText);
+                        var spot = IdentifyCropSpot();
+                        _pendingPlantSpot = spot.Type == CropSpotType.Invalid ? null : spot;
                     }
                     // In slot 0, so removal of withered crop.
                     else if (StringId.RemoveCrop.Match(buttonText))
@@ -323,6 +474,10 @@ public partial class TimerManager
                     {
                         TendCrop(descriptionText);
                     }
+                    else if (StringId.FertilizeCrop.Match(buttonText))
+                    {
+                        FertilizeCrop(descriptionText);
+                    }
 
                     return;
                 }
@@ -330,6 +485,8 @@ public partial class TimerManager
                 {
                     if (StringId.TendCrop.Match(buttonText))
                         TendCrop(descriptionText);
+                    else if (StringId.FertilizeCrop.Match(buttonText))
+                        FertilizeCrop(descriptionText);
                     return;
                 }
                 case 2:

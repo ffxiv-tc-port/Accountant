@@ -28,11 +28,12 @@ public class Accountant : IDalamudPlugin
     public Accountant(IDalamudPluginInterface pluginInterface)
     {
         Dalamud.Initialize(pluginInterface);
+        Loc.Load(Dalamud.ClientState.ClientLanguage);
         Interop.Init(Dalamud.Log, Dalamud.SigScanner);
         Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
         Config  = AccountantConfiguration.Load();
 
-        Watcher      = AddonWatcherFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.SigScanner, Dalamud.Interop);
+        Watcher      = AddonWatcherFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.SigScanner, Dalamud.Interop, pluginInterface);
         GameData     = GameDataFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.ClientState, Dalamud.Framework, Dalamud.GameData);
         Timers       = new TimerManager();
         DemoManager  = new DemolitionManager(Config, pluginInterface, Dalamud.ClientState, Dalamud.Framework, Dalamud.Objects);

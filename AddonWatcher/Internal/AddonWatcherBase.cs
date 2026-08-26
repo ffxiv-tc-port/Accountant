@@ -2,6 +2,7 @@
 using AddonWatcher.SeFunctions;
 using Dalamud.Game;
 using Dalamud.Hooking;
+using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
 namespace AddonWatcher.Internal;
@@ -19,8 +20,8 @@ internal partial class AddonWatcherBase : IDisposable
     internal LotteryWeeklyRewardListOnSetup LotteryWeeklyRewardListOnSetup;
     internal TalkOnUpdate                   TalkOnUpdate;
 
-    internal Hook<OnAddonReceiveEventDelegate>? SelectYesNoHook;
-    internal Hook<OnAddonReceiveEventDelegate>? SelectStringHook;
+    internal Hook<OnAddonReceiveEventDelegate>?  SelectYesNoHook;
+    internal Hook<OnAddonReceiveEventDelegate>?  SelectStringHook;
     internal Hook<OnAddonSetupDelegate>?        SelectYesnoSetupHook;
     internal Hook<OnAddonSetupDelegate>?        SelectStringSetupHook;
     internal Hook<OnAddonSetupDelegate>?        JournalResultSetupHook;
@@ -35,7 +36,8 @@ internal partial class AddonWatcherBase : IDisposable
     private event LotteryWeeklyRewardListSetupDelegate? LotteryWeeklyRewardListSetup;
     private event TalkUpdateDelegate?                   TalkUpdated;
 
-    public AddonWatcherBase(IPluginLog log, IGameGui gui, ISigScanner sigScanner, IGameInteropProvider provider)
+    public AddonWatcherBase(IPluginLog log, IGameGui gui, ISigScanner sigScanner, IGameInteropProvider provider,
+        IDalamudPluginInterface pluginInterface)
     {
         _log = log;
         _gui = gui;
@@ -55,6 +57,16 @@ internal partial class AddonWatcherBase : IDisposable
         JournalResultSetupHook           = JournalResultOnSetup.CreateHook(provider, JournalResultOnSetupDetour, false);
         LotteryWeeklyRewardListSetupHook = LotteryWeeklyRewardListOnSetup.CreateHook(provider, LotteryWeeklyRewardListOnSetupDetour, false);
         TalkUpdateHook                   = TalkOnUpdate.CreateHook(provider, TalkUpdateDetour, false);
+
+        // Detecting programmatic selections (e.g. SomethingNeedDoing's /callback command) used to
+        // hook the shared native AtkUnitBase::FireCallback directly, but that was found to corrupt
+        // unrelated dialogs' closing behavior (any hook on that function, regardless of what it
+        // does, disrupted cascading FireCallback calls the client makes internally - e.g. closing a
+        // ContextMenu after a selection - causing SelectYesno/InputNumeric-style dialogs to close on
+        // the player's next click). SomethingNeedDoing now broadcasts a Dalamud IPC event instead
+        // whenever it fires a programmatic callback, so we can detect the same selections without
+        // installing any native hook at all.
+        InitSndCallbackIpc(pluginInterface);
     }
 
     public void Dispose()
@@ -66,5 +78,6 @@ internal partial class AddonWatcherBase : IDisposable
         JournalResultSetupHook?.Dispose();
         LotteryWeeklyRewardListSetupHook?.Dispose();
         TalkUpdateHook?.Dispose();
+        DisposeSndCallbackIpc();
     }
 }

@@ -184,13 +184,13 @@ public partial class TimerWindow : IDisposable
             return;
 
         using var c = ImGuiRaii.PushColor(ImGuiCol.Header, _demolitionWarning.HeaderColor.Value());
-        ImGui.CollapsingHeader("No Full Free Company Data", ImGuiTreeNodeFlags.DefaultOpen);
+        ImGui.CollapsingHeader(Loc.T("No Full Free Company Data"), ImGuiTreeNodeFlags.DefaultOpen);
         if (ImGui.IsItemHovered())
         {
             using var tt = ImRaii.Tooltip();
-            ImGui.TextWrapped("No full data about your current free company available.\n\n"
+            ImGui.TextWrapped(Loc.T("No full data about your current free company available.\n\n"
               + "Please leave your current instance or relog onto your character if this does not help to obtain Free Company Data after a Accountant Update.\n\n"
-              + "You can disable this warning permanently in the settings.");
+              + "You can disable this warning permanently in the settings."));
         }
     }
 
@@ -200,7 +200,7 @@ public partial class TimerWindow : IDisposable
             return;
 
         using var c = ImGuiRaii.PushColor(ImGuiCol.Header, _demolitionWarning.HeaderColor.Value());
-        if (!ImGui.CollapsingHeader("Demolishing Houses", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader(Loc.T("Demolishing Houses"), ImGuiTreeNodeFlags.DefaultOpen))
             return;
 
         foreach (var warning in _demolitionWarning.Warnings)
@@ -225,7 +225,7 @@ public partial class TimerWindow : IDisposable
             ObjectStatus.Available => _availableString,
             ObjectStatus.Completed => _completedString,
             ObjectStatus.Sent      => null,
-            ObjectStatus.Limited   => "Limited",
+            ObjectStatus.Limited   => Loc.T("Limited"),
             _                      => throw new ArgumentOutOfRangeException(nameof(status), status, null),
         };
 }

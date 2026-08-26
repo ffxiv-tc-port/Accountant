@@ -20,7 +20,6 @@ public partial class TimerManager
             _subTasks =
             [
                 new LeveManager(tasks),
-                new SquadronManager(tasks),
                 new MapManager(tasks),
                 new TribeManager(tasks),
                 new DeliveryManager(tasks),

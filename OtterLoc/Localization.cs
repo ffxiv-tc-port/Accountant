@@ -48,13 +48,15 @@ public static class LocalizationDict<T> where T : Enum
     public static bool Register(T key, string s)
         => Register(key, new LocName(s));
 
-    public static bool RegisterName(T key, ClientLanguage lang, string en, string jp, string de, string fr)
+    public static bool RegisterName(T key, ClientLanguage lang, string en, string jp, string de, string fr, string? zh = null)
         => lang switch
         {
-            ClientLanguage.Japanese => Register(key, jp),
-            ClientLanguage.German   => Register(key, de),
-            ClientLanguage.French   => Register(key, fr),
-            _                       => Register(key, en),
+            ClientLanguage.Japanese           => Register(key, jp),
+            ClientLanguage.German             => Register(key, de),
+            ClientLanguage.French             => Register(key, fr),
+            ClientLanguage.ChineseSimplified  => Register(key, zh ?? en),
+            ClientLanguage.ChineseTraditional => Register(key, zh ?? en),
+            _                                 => Register(key, en),
         };
 
     public static bool RegisterName(T key, ClientLanguage lang, SeString se, int payloadEn, int payloadJp, int payloadDe, int payloadFr)

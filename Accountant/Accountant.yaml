@@ -1,10 +1,11 @@
 name: Accountant
-author: Ottermandias
+author: Ottermandias, Lother
 description: |-
-  Keep track of retainer, airship, submersible, aetherial wheel and crop timers
-  as well as several miscellaneous tasks of multiple characters.
-punchline: Character task timers.
-repo_url: https://github.com/Ottermandias/Accountant
+  記錄多名角色的雇員、飛艇、潛水艇、以太之輪與作物計時器，
+  以及其他各種雜項任務進度。
+punchline: 角色任務計時器。
+repo_url: https://github.com/Lother/Accountant
+icon_url: https://raw.githubusercontent.com/Lother/Accountant/tc-7.15/images/icon.png
 tags:
   - Airship
   - Gardening

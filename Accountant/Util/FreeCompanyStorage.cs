@@ -14,6 +14,10 @@ public class FreeCompanyStorage
 
     public readonly List<FreeCompanyInfo> Infos = [];
 
+    // Keyed and valued by PlayerInfo.CastedName / FreeCompanyInfo.CastedName (plain strings)
+    // rather than the structs themselves, since Newtonsoft cannot round-trip non-string dictionary keys.
+    public readonly Dictionary<string, string> CharacterCompanies = [];
+
     [JsonIgnore]
     public DateTime LastChangeTime { get; private set; } = DateTime.UtcNow.AddMilliseconds(500);
 
@@ -26,9 +30,25 @@ public class FreeCompanyStorage
             return null;
 
         var (tag, name, leader) = Accountant.GameData.FreeCompanyInfo();
-        var id = (ushort)Dalamud.ClientState.LocalPlayer.HomeWorld.RowId;
-        return FindByAndUpdateInfo(tag, name, leader, id);
+        var id      = (ushort)Dalamud.ClientState.LocalPlayer.HomeWorld.RowId;
+        var company = FindByAndUpdateInfo(tag, name, leader, id);
+        if (company.HasValue)
+        {
+            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            if (!CharacterCompanies.TryGetValue(player.CastedName, out var known) || known != company.Value.CastedName)
+            {
+                CharacterCompanies[player.CastedName] = company.Value.CastedName;
+                Save();
+            }
+        }
+
+        return company;
     }
+
+    public FreeCompanyInfo? GetCompanyForCharacter(PlayerInfo player)
+        => CharacterCompanies.TryGetValue(player.CastedName, out var companyKey)
+            ? Infos.FirstOrDefault(i => i.CastedName == companyKey)
+            : null;
 
     private static FileInfo FileInfo
         => new(Path.Combine(Dalamud.PluginInterface.GetPluginConfigDirectory(), FileName));

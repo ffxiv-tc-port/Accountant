@@ -48,51 +48,68 @@ internal partial class AddonWatcherBase
 
     private void SelectYesNoEventDetour(IntPtr atkUnit, EventType eventType, int which, IntPtr source, IntPtr data)
     {
+        // See FireCallbackDetour for why this captures text up front but defers logging/event
+        // dispatch until after Original() - the addon's own event handling must return promptly.
+        Action? deferred = null;
+
         if (eventType == EventType.Change)
         {
             var ptr             = (SelectYesNoInfo)atkUnit;
             var descriptionText = ptr.Description;
             switch (which)
             {
-                case SelectYesNoInfo.YesButtonId:
+                case SelectYesNoInfo.YesButtonId when ShouldReport(atkUnit, which):
                     var yesText = ptr.YesText;
-                    _log.Verbose("Yes-Button {ButtonText} selected on 0x{SelectYesnoPtr:X} with description {Description}.", yesText,
-                        (ulong)atkUnit, descriptionText);
-                    YesnoSelected!.Invoke(atkUnit, true, yesText, descriptionText);
+                    deferred = () =>
+                    {
+                        _log.Verbose("Yes-Button {ButtonText} selected on 0x{SelectYesnoPtr:X} with description {Description}.", yesText,
+                            (ulong)atkUnit, descriptionText);
+                        YesnoSelected!.Invoke(atkUnit, true, yesText, descriptionText);
+                    };
                     break;
-                case SelectYesNoInfo.NoButtonId:
+                case SelectYesNoInfo.NoButtonId when ShouldReport(atkUnit, which):
                     var noText = ptr.NoText;
-                    _log.Verbose("No-Button {ButtonText} selected on 0x{SelectYesnoPtr:X} with description {Description}.", noText,
-                        (ulong)atkUnit, descriptionText);
-                    YesnoSelected!.Invoke(atkUnit, false, noText, descriptionText);
+                    deferred = () =>
+                    {
+                        _log.Verbose("No-Button {ButtonText} selected on 0x{SelectYesnoPtr:X} with description {Description}.", noText,
+                            (ulong)atkUnit, descriptionText);
+                        YesnoSelected!.Invoke(atkUnit, false, noText, descriptionText);
+                    };
                     break;
             }
         }
 
         SelectYesNoHook!.Original(atkUnit, eventType, which, source, data);
+        deferred?.Invoke();
     }
 
     private static readonly ByteString SelectStringName = new("SelectString");
 
     private unsafe void SelectStringEventDetour(IntPtr atkUnit, EventType eventType, int which, IntPtr source, IntPtr data)
     {
+        Action? deferred = null;
+
         if (eventType == EventType.ListIndexChange && data != IntPtr.Zero)
         {
             var owner = ((PopupMenu*)atkUnit)->Owner;
-            if (SelectStringName.EqualsNullTerminated(owner->Name))
+            if (SelectStringName.EqualsNullTerminated(owner->Name) && ShouldReport((IntPtr)owner, ((byte*)data)[0x10]))
             {
                 var ptr              = (IntPtr)owner;
                 var idx              = ((byte*)data)[0x10];
                 var selectStringInfo = (SelectStringInfo) ptr;
                 var descriptionText  = selectStringInfo.Description;
                 var itemText         = selectStringInfo.ItemText(idx);
-                _log.Verbose("String {ButtonText} ({Which}) selected on 0x{SelectStringPtr:X} with description {Description}.", itemText,
-                    which, (ulong)ptr, descriptionText);
-                StringSelected!.Invoke(ptr, idx, itemText, descriptionText);
+                deferred = () =>
+                {
+                    _log.Verbose("String {ButtonText} ({Which}) selected on 0x{SelectStringPtr:X} with description {Description}.", itemText,
+                        which, (ulong)ptr, descriptionText);
+                    StringSelected!.Invoke(ptr, idx, itemText, descriptionText);
+                };
             }
         }
 
         SelectStringHook!.Original(atkUnit, eventType, which, source, data);
+        deferred?.Invoke();
     }
 
 

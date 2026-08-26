@@ -11,7 +11,7 @@ public partial class ConfigWindow
 {
     private void DrawConfigTab()
     {
-        if (!ImGui.BeginTabItem("Config##AccountantTabs"))
+        if (!ImGui.BeginTabItem($"{Loc.T("Config")}##AccountantTabs"))
             return;
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTabItem);
@@ -21,9 +21,9 @@ public partial class ConfigWindow
 
         raii.Push(ImGui.EndChild);
 
-        ImGuiRaii.ConfigCheckmark("Enable Plugin", Accountant.Config.Enabled,       EnableTimers);
-        ImGuiRaii.ConfigCheckmark("Show Timers",   Accountant.Config.WindowVisible, b => Accountant.Config.WindowVisible = b);
-        ImGuiRaii.ConfigCheckmark("Show DTR Header", Accountant.Config.ShowDtr, b =>
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Plugin"), Accountant.Config.Enabled,       EnableTimers);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Show Timers"),   Accountant.Config.WindowVisible, b => Accountant.Config.WindowVisible = b);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Show DTR Header"), Accountant.Config.ShowDtr, b =>
         {
             Accountant.Config.ShowDtr = b;
             if (b)
@@ -31,58 +31,58 @@ public partial class ConfigWindow
             else
                 TimerWindow.DtrManager.Disable();
         });
-        ImGuiRaii.ConfigCheckmark("Show Unassigned Retainers/Machines in Headers", Accountant.Config.ShowUnassignedInHeader,
+        ImGuiRaii.ConfigCheckmark(Loc.T("Show Unassigned Retainers/Machines in Headers"), Accountant.Config.ShowUnassignedInHeader,
             b => Accountant.Config.ShowUnassignedInHeader = b);
-        ImGuiRaii.ConfigCheckmark("Show Sent-Out Retainers/Machines in Headers", Accountant.Config.ShowUnderwayInHeader,
+        ImGuiRaii.ConfigCheckmark(Loc.T("Show Sent-Out Retainers/Machines in Headers"), Accountant.Config.ShowUnderwayInHeader,
             b => Accountant.Config.ShowUnderwayInHeader = b);
-        ImGuiRaii.ConfigCheckmark("No Collapsed Header Styling", Accountant.Config.NoHeaderStyling, b => Accountant.Config.NoHeaderStyling = b);
-        ImGuiRaii.ConfigCheckmark("No Timer Window Resize",      Accountant.Config.ProhibitResize,  b => Accountant.Config.ProhibitResize  = b);
-        ImGuiRaii.ConfigCheckmark("Fix Timer Window Width", Accountant.Config.FixedWindowWidth != null,
+        ImGuiRaii.ConfigCheckmark(Loc.T("No Collapsed Header Styling"), Accountant.Config.NoHeaderStyling, b => Accountant.Config.NoHeaderStyling = b);
+        ImGuiRaii.ConfigCheckmark(Loc.T("No Timer Window Resize"),      Accountant.Config.ProhibitResize,  b => Accountant.Config.ProhibitResize  = b);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Fix Timer Window Width"), Accountant.Config.FixedWindowWidth != null,
             b => Accountant.Config.FixedWindowWidth = b ? 300f : null);
         if (Accountant.Config.FixedWindowWidth != null)
         {
             var value = Accountant.Config.FixedWindowWidth.Value;
             ImGui.SetNextItemWidth(300 * ImGuiHelpers.GlobalScale);
-            if (ImGui.DragFloat("Fixed Timer Window Width", ref value, 1f, 100f, 1000f))
+            if (ImGui.DragFloat(Loc.T("Fixed Timer Window Width"), ref value, 1f, 100f, 1000f))
                 Accountant.Config.FixedWindowWidth = value;
 
             if (ImGui.IsItemDeactivatedAfterEdit())
                 Accountant.Config.Save();
         }
 
-        ImGuiRaii.ConfigCheckmark("No Timer Window Movement", Accountant.Config.ProhibitMoving, b => Accountant.Config.ProhibitMoving = b);
-        ImGuiRaii.ConfigCheckmark("Hide Disabled Objects",    Accountant.Config.HideDisabled,   b => Accountant.Config.HideDisabled   = b);
-        ImGuiRaii.HoverTooltip("Hide objects that are disabled or limited from the timers.");
+        ImGuiRaii.ConfigCheckmark(Loc.T("No Timer Window Movement"), Accountant.Config.ProhibitMoving, b => Accountant.Config.ProhibitMoving = b);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Hide Disabled Objects"),    Accountant.Config.HideDisabled,   b => Accountant.Config.HideDisabled   = b);
+        ImGuiRaii.HoverTooltip(Loc.T("Hide objects that are disabled or limited from the timers."));
         ImGui.NewLine();
 
-        ImGuiRaii.ConfigCheckmark("Show Free Company Warning", Accountant.Config.ShowFreeCompanyWarning,
+        ImGuiRaii.ConfigCheckmark(Loc.T("Show Free Company Warning"), Accountant.Config.ShowFreeCompanyWarning,
             b => Accountant.Config.ShowFreeCompanyWarning = b);
-        ImGuiRaii.ConfigCheckmark("Enable Retainer Timers", Accountant.Config.EnableRetainers, EnableRetainers);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Retainer Timers"), Accountant.Config.EnableRetainers, EnableRetainers);
         ImGui.NewLine();
-        ImGuiRaii.ConfigCheckmark("Enable Airship Timers",         Accountant.Config.EnableAirships,     EnableAirships);
-        ImGuiRaii.ConfigCheckmark("Enable Submersible Timers",     Accountant.Config.EnableSubmersibles, EnableSubmersibles);
-        ImGuiRaii.ConfigCheckmark("Enable Aetherial Wheel Timers", Accountant.Config.EnableWheels,       EnableWheels);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Airship Timers"),         Accountant.Config.EnableAirships,     EnableAirships);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Submersible Timers"),     Accountant.Config.EnableSubmersibles, EnableSubmersibles);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Aetherial Wheel Timers"), Accountant.Config.EnableWheels,       EnableWheels);
         ImGui.NewLine();
-        ImGuiRaii.ConfigCheckmark("Enable Crop Timers",        Accountant.Config.EnableCrops, EnableCrops);
-        ImGuiRaii.ConfigCheckmark("Ignore Indoor Plot Plants", Accountant.Config.IgnoreIndoorPlants, IgnoreIndoorPlants);
-        ImGuiRaii.ConfigCheckmark("Group Crop Beds by Plant",  Accountant.Config.OrderByCrop, OrderByCrop);
-        ImGuiRaii.ConfigCheckmark("Show Ward-Update Tooltip",  Accountant.Config.ShowCropTooltip, v => Accountant.Config.ShowCropTooltip = v);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Crop Timers"),        Accountant.Config.EnableCrops, EnableCrops);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Ignore Indoor Plot Plants"), Accountant.Config.IgnoreIndoorPlants, IgnoreIndoorPlants);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Group Crop Beds by Plant"),  Accountant.Config.OrderByCrop, OrderByCrop);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Show Ward-Update Tooltip"),  Accountant.Config.ShowCropTooltip, v => Accountant.Config.ShowCropTooltip = v);
         ImGui.NewLine();
-        ImGuiRaii.ConfigCheckmark("Enable Leve Allowance Timers", Accountant.Config.EnableLeveAllowances, EnableLeveAllowances);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Leve Allowance Timers"), Accountant.Config.EnableLeveAllowances, EnableLeveAllowances);
         DrawLeveAllowancesWarningInput();
-        ImGuiRaii.ConfigCheckmark("Enable Squadron Mission Timers",          Accountant.Config.EnableSquadron,     EnableSquadron);
-        ImGuiRaii.ConfigCheckmark("Enable Map Allowance Timers",             Accountant.Config.EnableMapAllowance, EnableMapAllowance);
-        ImGuiRaii.ConfigCheckmark("Enable Mini Cactpot Timers",              Accountant.Config.EnableMiniCactpot,  EnableMiniCactpot);
-        ImGuiRaii.ConfigCheckmark("Enable Jumbo Cactpot Timers",             Accountant.Config.EnableJumboCactpot, EnableJumboCactpot);
-        ImGuiRaii.ConfigCheckmark("Enable Custom Delivery Allowance Timers", Accountant.Config.EnableDeliveries,   EnableDeliveries);
-        ImGuiRaii.ConfigCheckmark("Enable Tribe Allowance Timers",           Accountant.Config.EnableTribes,       EnableTribes);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Squadron Mission Timers"),          Accountant.Config.EnableSquadron,     EnableSquadron);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Map Allowance Timers"),             Accountant.Config.EnableMapAllowance, EnableMapAllowance);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Mini Cactpot Timers"),              Accountant.Config.EnableMiniCactpot,  EnableMiniCactpot);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Jumbo Cactpot Timers"),             Accountant.Config.EnableJumboCactpot, EnableJumboCactpot);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Custom Delivery Allowance Timers"), Accountant.Config.EnableDeliveries,   EnableDeliveries);
+        ImGuiRaii.ConfigCheckmark(Loc.T("Enable Tribe Allowance Timers"),           Accountant.Config.EnableTribes,       EnableTribes);
         DrawTribeAllowancesFinishedInput();
         ImGui.NewLine();
     }
 
     private static void DrawColorsTab()
     {
-        if (!ImGui.BeginTabItem("Colors##AccountantTabs"))
+        if (!ImGui.BeginTabItem($"{Loc.T("Colors")}##AccountantTabs"))
             return;
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTabItem);
@@ -94,7 +94,7 @@ public partial class ConfigWindow
 
         foreach (var color in Enum.GetValues<ColorId>())
         {
-            ImGuiRaii.ConfigColorPicker(color.Name(), color.Description(), color.Value(), c => Accountant.Config.Colors[color] = c,
+            ImGuiRaii.ConfigColorPicker(Loc.T(color.Name()), Loc.T(color.Description()), color.Value(), c => Accountant.Config.Colors[color] = c,
                 color.Default());
         }
     }
@@ -103,7 +103,7 @@ public partial class ConfigWindow
     {
         var leveAllowances = Accountant.Config.LeveWarning;
         ImGui.SetNextItemWidth(150 * ImGuiHelpers.GlobalScale);
-        if (!ImGui.DragInt("Leve Allowances Warning", ref leveAllowances, 1, 0, Leve.AllowanceError))
+        if (!ImGui.DragInt(Loc.T("Leve Allowances Warning"), ref leveAllowances, 1, 0, Leve.AllowanceError))
             return;
 
         if (leveAllowances < 0)
@@ -122,7 +122,7 @@ public partial class ConfigWindow
     {
         var tribeAllowances = Accountant.Config.TribesFinished;
         ImGui.SetNextItemWidth(150 * ImGuiHelpers.GlobalScale);
-        if (!ImGui.DragInt("Tribe Quests Finished", ref tribeAllowances, 1, 0, Tribe.AllowanceCap))
+        if (!ImGui.DragInt(Loc.T("Tribe Quests Finished"), ref tribeAllowances, 1, 0, Tribe.AllowanceCap))
             return;
 
         if (tribeAllowances < 0)

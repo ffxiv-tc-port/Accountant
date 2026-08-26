@@ -51,6 +51,28 @@ public sealed class RetainerTimers : TimersBase<PlayerInfo, RetainerInfo[]>
         return true;
     }
 
+    public bool UpdateVentureFromExternal(PlayerInfo player, string retainerName, uint ventureId, System.DateTime venture)
+    {
+        if (!InternalData.TryGetValue(player, out var retainerList))
+            return false;
+
+        for (var i = 0; i < retainerList.Length; ++i)
+        {
+            if (retainerList[i].RetainerId == 0 || retainerList[i].Name != retainerName)
+                continue;
+
+            if (retainerList[i].VentureId == ventureId && Helpers.DateTimeClose(retainerList[i].Venture, venture))
+                return false;
+
+            retainerList[i].VentureId = ventureId;
+            retainerList[i].Venture   = venture;
+            Invoke();
+            return true;
+        }
+
+        return false;
+    }
+
     public bool ClearRetainer(PlayerInfo player, byte slot)
     {
         if (slot >= RetainerInfo.MaxSlots)

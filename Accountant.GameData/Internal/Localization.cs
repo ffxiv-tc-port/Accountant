@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Accountant.Enums;
@@ -25,10 +25,25 @@ internal static class Localization
     private static readonly Regex PlantingTextDe =
         new(@"(?<soil>.*?) verteilen und (einer |einem )?(?<seeds>.*?) aussäen\?", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
-    private static readonly Regex PlantingTextJp = new(@"(?<soil>.*?)に(?<seeds>.*?)を植えます。よろしいですか？", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+    private static readonly Regex PlantingTextJp = new(@"(?<soil>.*?)に(?<seeds>.*?)を植えます。よろしいですか？", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+
+    private static readonly Regex PlantingTextZh = new(@"將(?<seeds>.*?)種植在(?<soil>.*?)中嗎", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+
+    private static readonly Regex PatchTextZh = new(@"圃(?<patch>\d).*?壟(?<bed>\d)", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
     private static StringParser PatchParser(ClientLanguage lang)
     {
+        if (lang is ClientLanguage.ChineseSimplified or ClientLanguage.ChineseTraditional)
+        {
+            IList<string> ZhFunc(string s)
+            {
+                var m = PatchTextZh.Match(s);
+                return m.Success ? new[] { m.Groups["patch"].Value, m.Groups["bed"].Value } : Array.Empty<string>();
+            }
+
+            return new StringParser(ZhFunc);
+        }
+
         var (bed, patch) = lang switch
         {
             ClientLanguage.German   => (15, 5),
@@ -52,10 +67,14 @@ internal static class Localization
         return new StringParser(Func);
     }
 
-    private static void SetCropCommands(IDataManager data)
+    private static void SetCropCommands(IPluginLog log, IDataManager data)
     {
         var sheet = data.Excel.GetSheet<RawRow>(data.Language.ToLumina(), "custom/001/cmndefhousinggardeningplant_00151");
         var addon = data.Excel.GetSheet<Addon>();
+
+        log.Debug($"[Accountant] Crop command sheet row count: {sheet.Count}");
+        for (var i = 0; i <= 11; ++i)
+            log.Debug($"[Accountant] Crop command row {i}: '{sheet.GetRow((uint)i).ReadStringColumn(1).ExtractText()}'");
 
         LocalizationDict<StringId>.RegisterComparer(StringId.HarvestCrop,   sheet.GetRow(6).ReadStringColumn(1).ExtractText());
         LocalizationDict<StringId>.RegisterComparer(StringId.TendCrop,      sheet.GetRow(4).ReadStringColumn(1).ExtractText());
@@ -79,7 +98,7 @@ internal static class Localization
         LocalizationDict<StringId>.Register(StringId.PlantMatcher, SeStringParser.SpecificPayload(data.Language, 2, 3, 2, 3));
         LocalizationDict<StringId>.Register(StringId.PatchMatcher, PatchParser(data.Language));
         LocalizationDict<StringId>.Register(StringId.SeedMatcher,
-            StringParser.FromRegex(data.Language, PlantingTextEn, PlantingTextFr, PlantingTextJp, PlantingTextDe, "seeds", "soil"));
+            StringParser.FromRegex(data.Language, PlantingTextEn, PlantingTextFr, PlantingTextJp, PlantingTextDe, PlantingTextZh, "seeds", "soil"));
     }
 
     private static readonly Regex WheelTextEn = new(@"Place (the )?(?<wheel>.*?) on the wheel stand\?", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
@@ -91,6 +110,8 @@ internal static class Localization
 
     private static readonly Regex WheelTextJp = new(@"「(<?wheel>.*?)」を.*ホイールスタンドに設置します。.*よろしいですか？", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
 
+    private static readonly Regex WheelTextZh = new(@"要將「(?<wheel>.*?)」設置到轉輪台上嗎", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+
     private static readonly Regex JumboTextEn = new(@"number\s+(?<ticket>\d{4})", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
     private static readonly Regex JumboTextFr = new(@"(?<ticket>\d{4})\s+pour", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
@@ -99,7 +120,9 @@ internal static class Localization
 
     private static readonly Regex JumboTextJp = new(@"(?<ticket>\d{4})番を", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
-    public static void Initialize(IDataManager data)
+    private static readonly Regex JumboTextZh = new(@"購買(?<ticket>\d{4})號", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+
+    public static void Initialize(IPluginLog log, IDataManager data)
     {
         if (_initialized)
             return;
@@ -133,8 +156,8 @@ internal static class Localization
         LocalizationDict<StringId>.RegisterName(StringId.Unknown, data.Language, "Unknown", "不明", "Unbekannt", "Inconnu");
 
         LocalizationDict<StringId>.RegisterName(StringId.CropPatch, data.Language, "Patch",      "畑",     "Beet",       "Potager");
-        LocalizationDict<StringId>.RegisterName(StringId.CropPot,   data.Language, "Flower Pot", "プランター", "Blumentopf", "Pot de Fleurs");
-        LocalizationDict<StringId>.RegisterName(StringId.CropBed,   data.Language, "Bed",        "の畝",    "Furche",     "Emplacement");
+        LocalizationDict<StringId>.RegisterName(StringId.CropPot,   data.Language, "Flower Pot", "プランター", "Blumentopf", "Pot de Fleurs", "花盆");
+        LocalizationDict<StringId>.RegisterName(StringId.CropBed,   data.Language, "Bed",        "の畝",    "Furche",     "Emplacement", "園圃");
 
         LocalizationDict<StringId>.RegisterName(StringId.Cottage,   data.Language, "Cottage",   "コテージ",  "Hütte",         "Maisonnette");
         LocalizationDict<StringId>.RegisterName(StringId.House,     data.Language, "House",     "ハウス",   "Haus",          "Pavillon");
@@ -152,14 +175,14 @@ internal static class Localization
         LocalizationDict<StringId>.Register(StringId.Retainer, addon.GetRow(6163).Text.ExtractText());
 
         LocalizationDict<StringId>.Register(StringId.WheelFilter,
-            StringParser.FromRegex(data.Language, WheelTextEn, WheelTextFr, WheelTextJp, WheelTextDe, "wheel"));
+            StringParser.FromRegex(data.Language, WheelTextEn, WheelTextFr, WheelTextJp, WheelTextDe, WheelTextZh, "wheel"));
 
         LocalizationDict<StringId>.Register(StringId.BuyMiniCactpotTicket,
             new StringMatcherLetters(goldSaucerTalk.GetRow(16).ReadStringColumn(17).ExtractText()));
         LocalizationDict<StringId>.Register(StringId.BuyJumboCactpotTicket,
             new StringMatcherLetters(addon.GetRow(9276).Text.ExtractText()));
         LocalizationDict<StringId>.Register(StringId.FilterJumboCactpotTicket,
-            StringParser.FromRegex(data.Language, JumboTextEn, JumboTextFr, JumboTextJp, JumboTextDe, "ticket"));
-        SetCropCommands(data);
+            StringParser.FromRegex(data.Language, JumboTextEn, JumboTextFr, JumboTextJp, JumboTextDe, JumboTextZh, "ticket"));
+        SetCropCommands(log, data);
     }
 }

@@ -88,7 +88,7 @@ internal class GameData : IGameData
         _plots     ??= new Plots(data);
         SetupWorlds(data);
         ++_subscribers;
-        Localization.Initialize(data);
+        Localization.Initialize(log, data);
     }
 
     private static void SetupWorlds(IDataManager data)
@@ -135,7 +135,13 @@ internal class GameData : IGameData
         if (world.IsPublic)
             return true;
 
-        return char.IsUpper((char)world.Name.Data.Span[0]);
+        var firstByte = world.Name.Data.Span[0];
+        // Non-ASCII (multi-byte UTF-8) names are localized world names, e.g. TC's
+        // Chinese-named worlds, which are always real worlds despite IsPublic being false there.
+        if (firstByte >= 0x80)
+            return true;
+
+        return char.IsUpper((char)firstByte);
     }
 
     public void Dispose()

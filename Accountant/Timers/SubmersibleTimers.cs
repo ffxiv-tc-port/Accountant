@@ -49,6 +49,31 @@ public sealed class SubmersibleTimers : TimersBase<FreeCompanyInfo, MachineInfo[
         return true;
     }
 
+    public FreeCompanyInfo? UpdateArrivalFromExternal(FreeCompanyInfo? scopedCompany, string vesselName, System.DateTime arrival)
+    {
+        var candidates = scopedCompany.HasValue
+            ? InternalData.Where(kv => kv.Key.Equals(scopedCompany.Value))
+            : InternalData;
+
+        foreach (var (company, machines) in candidates)
+        {
+            for (var i = 0; i < machines.Length; ++i)
+            {
+                if (machines[i].Type != MachineType.Submersible || machines[i].Name != vesselName)
+                    continue;
+
+                if (Helpers.DateTimeClose(machines[i].Arrival, arrival))
+                    return null;
+
+                machines[i].Arrival = arrival;
+                Invoke();
+                return company;
+            }
+        }
+
+        return null;
+    }
+
     public bool ClearSubmersible(FreeCompanyInfo company, byte slot)
     {
         if (slot >= MachineInfo.MaxSlots)

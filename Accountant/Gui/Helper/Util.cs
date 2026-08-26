@@ -46,7 +46,7 @@ public static partial class ImGuiRaii
 
         ImGui.SameLine();
         using var alpha = PushStyle(ImGuiStyleVar.Alpha, 0.5f, current == standard);
-        if (ImGui.Button("Default") && current != standard)
+        if (ImGui.Button(Loc.T("Default")) && current != standard)
         {
             setter(standard);
             ret = true;

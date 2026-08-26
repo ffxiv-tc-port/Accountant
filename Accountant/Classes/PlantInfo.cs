@@ -16,6 +16,9 @@ public struct PlantInfo
     public Vector3  Position;
     public uint     PlantId;
     public bool     AccuratePlantTime;
+    public ushort   FertilizeCount;
+    public TimeSpan FertilizeReduction;
+    public DateTime LastFertilizeTime;
 
     public bool Active()
         => PlantId != 0;
@@ -32,17 +35,45 @@ public struct PlantInfo
     public DateTime DyingTime()
         => PlantId != 0 ? LastTending.AddMinutes(Accountant.GameData.FindCrop(PlantId).Data.WiltTime).AddDays(1) : DateTime.MinValue;
 
+    // True if the crop is still growing (with more than 24 hours of growth left - not worth a
+    // reminder once it's close to done anyway) and it has been more than an hour since it was
+    // last (successfully) fertilized - a nudge to go fertilize it again for the growth-time bonus.
+    public bool NeedsFertilizeReminder(DateTime now)
+    {
+        if (PlantId == 0)
+            return false;
+
+        var baseline = LastFertilizeTime == DateTime.MinValue ? PlantTime : LastFertilizeTime;
+        if (baseline == DateTime.MinValue)
+            return false;
+
+        var fin = FinishTime();
+        return fin - now > TimeSpan.FromHours(24) && now - baseline > TimeSpan.FromHours(1);
+    }
+
+    // "Already fully fertilized" is a failure to actually fertilize, but it confirms the crop
+    // is currently up to date, so - if we don't already have a real fertilize timestamp - treat
+    // this moment as a stand-in for one rather than leaving it looking overdue.
+    public void MarkFertilizedIfUnset(DateTime now)
+    {
+        if (LastFertilizeTime == DateTime.MinValue)
+            LastFertilizeTime = now;
+    }
+
     public bool Update(uint itemId, DateTime? plantTime, DateTime? tendTime,
         DateTime? fertilizeTime, Vector3? position = null)
     {
         var ret = false;
         if (PlantId != itemId)
         {
-            PlantId           = itemId;
-            PlantTime         = DateTime.MinValue;
-            LastTending       = DateTime.MinValue;
-            AccuratePlantTime = false;
-            ret               = true;
+            PlantId            = itemId;
+            PlantTime          = DateTime.MinValue;
+            LastTending        = DateTime.MinValue;
+            AccuratePlantTime  = false;
+            FertilizeCount     = 0;
+            FertilizeReduction = TimeSpan.Zero;
+            LastFertilizeTime  = DateTime.MinValue;
+            ret                = true;
         }
 
         if (tendTime.HasValue && tendTime.Value != LastTending)
@@ -53,18 +84,50 @@ public struct PlantInfo
             // if the plant is grown, and yet we tended it, assume it's a new plant
             if (this.FinishTime() < tendTime)
             {
-                PlantTime = LastTending;
-                AccuratePlantTime = false;
+                PlantTime           = LastTending;
+                AccuratePlantTime   = false;
+                FertilizeCount      = 0;
+                FertilizeReduction  = TimeSpan.Zero;
+                LastFertilizeTime   = DateTime.MinValue;
             }
             ret = true;
         }
 
         if (plantTime.HasValue && plantTime.Value != PlantTime)
         {
-            AccuratePlantTime = true;
-            PlantTime         = plantTime.Value;
-            LastTending       = PlantTime;
-            ret               = true;
+            AccuratePlantTime  = true;
+            PlantTime          = plantTime.Value;
+            LastTending        = PlantTime;
+            FertilizeCount     = 0;
+            FertilizeReduction = TimeSpan.Zero;
+            LastFertilizeTime  = DateTime.MinValue;
+            ret                = true;
+        }
+
+        // A fertilize report can be the very first time we see this crop (e.g. a fresh
+        // fertilize success on a previously untracked slot). Without a plant/tend time to
+        // go on, use this moment as an approximate planted time instead of leaving the crop
+        // identified but dateless (same rationale as the tend-based fallback above).
+        if (fertilizeTime.HasValue && PlantTime == DateTime.MinValue)
+        {
+            PlantTime   = fertilizeTime.Value;
+            LastTending = fertilizeTime.Value;
+            ret         = true;
+        }
+
+        if (fertilizeTime.HasValue && PlantTime != DateTime.MinValue)
+        {
+            // Fertilizing reduces the remaining growth time by 1%; it does not affect wilting/withering.
+            var remaining = FinishTime() - fertilizeTime.Value;
+            if (remaining > TimeSpan.Zero)
+            {
+                var reduction = remaining * 0.01;
+                PlantTime          -= reduction;
+                FertilizeReduction += reduction;
+                LastFertilizeTime  =  fertilizeTime.Value;
+                ++FertilizeCount;
+                ret = true;
+            }
         }
 
         if (position.HasValue)

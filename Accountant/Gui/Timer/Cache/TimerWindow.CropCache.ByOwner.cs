@@ -16,7 +16,7 @@ public partial class TimerWindow
         {
             var ret = new CacheObject
             {
-                Name       = name,
+                Name       = plant.NeedsFertilizeReminder(Now) ? $"{FertilizeReminderMark} {name}" : name,
                 IconOffset = 0,
             };
 
@@ -40,34 +40,45 @@ public partial class TimerWindow
             return ret;
         }
 
+        private static void FinalizeOwnerName(ref SmallHeader owner, string baseName, List<CacheObject> children)
+        {
+            var needsReminder = children.Any(c => c.Name.StartsWith(FertilizeReminderMark + " ", StringComparison.Ordinal));
+            owner.Name = needsReminder ? $"{FertilizeReminderMark} {baseName}###{baseName}" : baseName;
+        }
+
         private SmallHeader GenerateOwner(PlayerInfo player, IList<PlantInfo> plants)
         {
+            var baseName = GetName(player.Name, player.ServerId);
             var owner = new SmallHeader
             {
-                Name         = GetName(player.Name, player.ServerId),
+                Name         = baseName,
                 ObjectsBegin = Objects.Count,
                 ObjectsCount = plants.Count,
                 Color        = ColorId.NeutralText,
             };
 
+            var children = new List<CacheObject>();
             for (ushort i = 0; i < plants.Count; ++i)
             {
                 if (!Accountant.Config.BlockedCrops.Contains(plants[i].PlantId))
                 {
                     Objects.Add(GeneratePlant(plants[i], PlantInfo.GetPrivateName(i)));
+                    children.Add(Objects.Last());
                     UpdateParent(Objects.Last().Color, Objects.Last().DisplayTime, ref owner.Color, ref owner.DisplayTime);
                 }
             }
 
+            FinalizeOwnerName(ref owner, baseName, children);
             UpdateParent(owner.Color.TextToHeader(), owner.DisplayTime, ref Color, ref DisplayTime);
             return owner;
         }
 
         private SmallHeader GenerateOwner(PlotInfo plot, IList<PlantInfo> plants)
         {
+            var baseName = GetName(plot.Name, plot.ServerId);
             var owner = new SmallHeader
             {
-                Name         = GetName(plot.Name, plot.ServerId),
+                Name         = baseName,
                 ObjectsBegin = Objects.Count,
                 Color        = ColorId.NeutralText,
             };
@@ -76,19 +87,22 @@ public partial class TimerWindow
             var count    = plants.Count;
             if (Accountant.Config.IgnoreIndoorPlants)
                 count -= plotSize.IndoorBeds();
-            var objects = 0;
+            var objects  = 0;
+            var children = new List<CacheObject>();
             for (ushort i = 0; i < count; ++i)
             {
                 if (!Accountant.Config.BlockedCrops.Contains(plants[i].PlantId))
                 {
                     ++objects;
                     Objects.Add(GeneratePlant(plants[i], PlantInfo.GetPlotName(plotSize, i)));
+                    children.Add(Objects.Last());
                     UpdateParent(Objects.Last().Color, Objects.Last().DisplayTime, ref owner.Color, ref owner.DisplayTime);
                 }
             }
 
             owner.ObjectsCount = objects;
 
+            FinalizeOwnerName(ref owner, baseName, children);
             UpdateParent(owner.Color.TextToHeader(), owner.DisplayTime, ref Color, ref DisplayTime);
 
             return owner;
@@ -119,7 +133,18 @@ public partial class TimerWindow
                 Headers.Add(GenerateOwner(player, plants));
 
             if (Accountant.Config.Priorities.Count > 0)
-                Headers.Sort((a, b) => Accountant.Config.GetPriority(b.Name).CompareTo(Accountant.Config.GetPriority(a.Name)));
+                Headers.Sort((a, b) => Accountant.Config.GetPriority(NameForPriority(b.Name)).CompareTo(Accountant.Config.GetPriority(NameForPriority(a.Name))));
+        }
+
+        private static string NameForPriority(string headerName)
+        {
+            var idPos = headerName.IndexOf("###", StringComparison.Ordinal);
+            if (idPos >= 0)
+                return headerName[(idPos + 3)..];
+
+            return headerName.StartsWith(FertilizeReminderMark + " ", StringComparison.Ordinal)
+                ? headerName[(FertilizeReminderMark.Length + 1)..]
+                : headerName;
         }
     }
 }
