@@ -21,8 +21,8 @@ public partial class ConfigWindow
         if (!ImGui.BeginTabItem($"{Loc.T("Blocklist")}##AccountantTabs"))
             return;
 
-        if (_newWorld == 0 && Dalamud.Objects.LocalPlayer != null)
-            _newWorld = (ushort)Dalamud.Objects.LocalPlayer.CurrentWorld.RowId;
+        if (_newWorld is 0 && Dalamud.PlayerState.IsLoaded)
+            _newWorld = (ushort)Dalamud.PlayerState.CurrentWorld.RowId;
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTabItem);
 
         if (!ImGui.BeginChild("##BlockListTab"))
