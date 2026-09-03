@@ -86,6 +86,9 @@ internal static class Localization
             MatchType.StartsWith);
         LocalizationDict<StringId>.RegisterComparer(StringId.PlantCrop, sheet.GetRow(2).ReadStringColumn(1).ExtractText());
 
+        // 第 7~10 列是作物狀態台詞。台服 7.20 離線實測(直讀 sqpack 原始 EXD)每列都是兩個 payload:
+        // [道具名巨集 0x28][句尾固定文字],依序為「已經枯萎了……」「正茁壯成長。」「的狀態不太好……」「已經成熟了。」。
+        // 因此 ^1 取到的正是那段固定文字,而句首會變動的作物名被刻意排除在比對之外。
         var matcher = SeStringMatcher.SinglePayloadComparer(data.Language, sheet.GetRow(7).ReadStringColumn(1).ToDalamudString(), ^1, ^1, ^1, 0);
         LocalizationDict<StringId>.Register(StringId.CropBeyondHope, matcher);
         matcher = SeStringMatcher.SinglePayloadComparer(data.Language, sheet.GetRow(8).ReadStringColumn(1).ToDalamudString(), ^1, ^1, ^1, 0);
@@ -94,6 +97,13 @@ internal static class Localization
         LocalizationDict<StringId>.Register(StringId.CropBetterDays, matcher);
         matcher = SeStringMatcher.SinglePayloadComparer(data.Language, sheet.GetRow(10).ReadStringColumn(1).ToDalamudString(), ^1, ^3, ^1, 0);
         LocalizationDict<StringId>.Register(StringId.CropReady, matcher);
+        // ⚠️ CropPrepareBed 這一筆的比對條件永遠不成立,原樣保留只是為了不回退既有行為(它從來沒有被查詢過)。
+        // 理由:ExtractText() 已經把巨集攤平成單一字串,再隱式轉成 SeString 只會得到「一個」TextPayload,
+        // 於是存下來的位元組是整句攤平文字;但執行期比對的目標是多 payload 的原生字串,索引 0 只拿得到第一段文字。
+        // 台服 7.20 實測 Addon#6413 原始位元組是「確定要將<Item>種植在<Item>中嗎？」——
+        // ExtractText() 得到「確定要將種植在中嗎？」,而目標的 payload[0] 只有「確定要將」,兩者不可能相等。
+        // 這個缺陷與語言無關(英文同理),而且目前無害:全 repo 只有 CropDoingWell / CropBetterDays 會被 Match,
+        // 同一個判斷已由 StringId.SeedMatcher(PlantingText* 正規式,含繁中)實際承擔。
         matcher = SeStringMatcher.SinglePayloadComparer(data.Language, addon.GetRow(6413).Text.ExtractText(), 0, 0, ^1, ^1);
         LocalizationDict<StringId>.Register(StringId.CropPrepareBed, matcher);
 

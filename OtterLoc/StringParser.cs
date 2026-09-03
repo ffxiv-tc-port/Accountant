@@ -29,36 +29,6 @@ public sealed class StringParser : ILocFilter
     public IList<string> Filter(string s)
         => _func(s);
 
-    public static StringParser FromRange(ClientLanguage lang, Range en, Range fr, Range jp, Range de)
-    {
-        var range = lang switch
-        {
-            ClientLanguage.Japanese => jp,
-            ClientLanguage.English  => en,
-            ClientLanguage.German   => de,
-            ClientLanguage.French   => fr,
-            _                       => en,
-        };
-
-        IList<string> Func(string s)
-        {
-            var end = (uint)(range.End.IsFromEnd ? s.Length - range.End.Value : range.End.Value);
-            if (end >= (uint)s.Length)
-                return Array.Empty<string>();
-
-            var start = (uint)(range.Start.IsFromEnd ? s.Length - range.Start.Value : range.Start.Value);
-            if (start >= end)
-                return Array.Empty<string>();
-
-            return new[]
-            {
-                s.Substring((int)start, (int)end),
-            };
-        }
-
-        return new StringParser(Func);
-    }
-
     public static StringParser FromRegex(ClientLanguage lang, Regex en, Regex fr, Regex jp, Regex de, Regex? zh, params string[] captureNames)
     {
         var regex = lang switch
