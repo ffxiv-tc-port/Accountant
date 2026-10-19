@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Accountant.Enums;
 using Accountant.Gui.Helper;
 using Accountant.Manager;
 using Accountant.Util;
+using Dalamud.Game.Gui.Dtr;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using OtterLoc.Structs;
 using DateTime = System.DateTime;
 
@@ -63,6 +65,9 @@ public partial class TimerWindow : IDisposable
         Accountant.Config.Save();
     }
 
+    public static void Toggle(DtrInteractionEvent obj)
+        => Toggle();
+
     private void SetWidthTotal()
     {
         if (_widthTotal > 0)
@@ -85,6 +90,7 @@ public partial class TimerWindow : IDisposable
         _demolitionWarning.Dispose();
         Dalamud.PluginInterface.UiBuilder.Draw       -= Draw;
         Dalamud.PluginInterface.UiBuilder.OpenMainUi -= Toggle;
+        DiagReport(true);
     }
 
     public void ResetCache()
@@ -101,9 +107,32 @@ public partial class TimerWindow : IDisposable
 
     private void Draw()
     {
+        DiagReportIfDue();
         if (!Accountant.Config.Enabled)
+        {
+            _diagDisabledFrames++;
             return;
+        }
 
+        var shown = Accountant.Config.WindowVisible;
+        DiagCountFrame(shown);
+        var allocated = GC.GetAllocatedBytesForCurrentThread();
+        try
+        {
+            DrawEnabled();
+        }
+        finally
+        {
+            var bytes = GC.GetAllocatedBytesForCurrentThread() - allocated;
+            if (shown)
+                _diagShownBytes += bytes;
+            else
+                _diagHiddenBytes += bytes;
+        }
+    }
+
+    private void DrawEnabled()
+    {
         _now = DateTime.UtcNow;
 
         if (!Accountant.Config.WindowVisible)
@@ -125,51 +154,91 @@ public partial class TimerWindow : IDisposable
         ImGui.SetNextWindowSizeConstraints(minSize, maxSize);
 
         var enabled = Accountant.Config.WindowVisible;
-        using var colors = ImGuiRaii.PushColor(ImGuiCol.WindowBg, ColorId.Background.Value())
-            .Push(ImGuiCol.Text, ColorId.NeutralText.Value());
-        if (!_drawData && !Accountant.Config.NoHeaderStyling)
-        {
-            colors.Push(ImGuiCol.Border, ColorId.CollapsedBorder.Value())
-                .Push(ImGuiCol.TitleBgCollapsed, _headerColor.Value());
-            using var style = ImGuiRaii.PushStyle(ImGuiStyleVar.WindowBorderSize, 1);
-            _drawData = ImGui.Begin(_headerString, ref enabled, flags);
-            colors.Pop(2);
-        }
-        else
-        {
-            _drawData = ImGui.Begin(_headerString, ref enabled, flags);
-        }
-
-        if (!enabled)
-        {
-            Accountant.Config.WindowVisible = false;
-            Accountant.Config.Save();
-        }
-
+        // 計時視窗每幀的推／彈直接呼叫 ImGui（ImGuiRaii 每次 new 一個物件）；每個 finally 彈的就是它前面那幾個推入。
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, ColorId.Background.Value());
+        ImGui.PushStyleColor(ImGuiCol.Text, ColorId.NeutralText.Value());
         try
         {
-            DrawCompanyWarning();
-            DrawDemolition();
+            if (!_drawData && !Accountant.Config.NoHeaderStyling)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Border, ColorId.CollapsedBorder.Value());
+                ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, _headerColor.Value());
+                ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1f);
+                try
+                {
+                    _drawData = ImGui.Begin(_headerString, ref enabled, flags);
+                }
+                finally
+                {
+                    ImGui.PopStyleColor(2);
+                    ImGui.PopStyleVar();
+                }
+            }
+            else
+            {
+                _drawData = ImGui.Begin(_headerString, ref enabled, flags);
+            }
 
-            foreach (var cache in _cache)
-                cache.Draw(_now);
+            if (!enabled)
+            {
+                Accountant.Config.WindowVisible = false;
+                Accountant.Config.Save();
+            }
 
-            if (Accountant.Config.Flags.Check(ConfigFlags.Retainers))
-                _headerString = Accountant.Config.Flags.Any(ConfigFlags.Airships | ConfigFlags.Submersibles)
-                    ? $"{_retainerCache.Counter.GetHeader(StringId.Retainers)}    {(_subCache.GlobalCounter + _airshipCache.GlobalCounter).GetHeader(StringId.Machines)}###Accountant.Timers"
-                    : $"{_retainerCache.Counter.GetHeader(StringId.Retainers)}###Accountant.Timers";
-            else if (Accountant.Config.Flags.Any(ConfigFlags.Airships | ConfigFlags.Submersibles))
-                _headerString =
-                    $"{(_subCache.GlobalCounter + _airshipCache.GlobalCounter).GetHeader(StringId.Machines)}###Accountant.Timers";
+            try
+            {
+                DrawCompanyWarning();
+                DrawDemolition();
 
-            if (Accountant.Config.Flags.Check(ConfigFlags.Crops))
-                _headerColor = _cropCache.Color;
-            DtrManager.Update(false);
+                foreach (var cache in _cache)
+                    cache.Draw(_now);
+
+                UpdateHeaderString();
+
+                if (Accountant.Config.Flags.Check(ConfigFlags.Crops))
+                    _headerColor = _cropCache.Color;
+                DtrManager.Update(false);
+            }
+            finally
+            {
+                ImGui.End();
+            }
         }
         finally
         {
-            ImGui.End();
+            ImGui.PopStyleColor(2);
         }
+    }
+
+    // 視窗標題只由這組值決定；沒變就沿用上一次的字串，不每幀重新內插。
+    private readonly record struct HeaderKey(bool Retainers, bool Machines, int RetainerCompleted, int RetainerAvailable,
+        int RetainerSent, int MachineCompleted, int MachineAvailable, int MachineSent, bool ShowUnassigned, bool ShowUnderway,
+        string? RetainerLabel, string? MachineLabel);
+
+    private HeaderKey _headerKey;
+
+    private void UpdateHeaderString()
+    {
+        var retainers = Accountant.Config.Flags.Check(ConfigFlags.Retainers);
+        var machines  = Accountant.Config.Flags.Any(ConfigFlags.Airships | ConfigFlags.Submersibles);
+        if (!retainers && !machines)
+            return;
+
+        var r = _retainerCache.Counter;
+        var m = _subCache.GlobalCounter + _airshipCache.GlobalCounter;
+        var key = new HeaderKey(retainers, machines, r.Completed, r.Available, r.Sent, m.Completed, m.Available, m.Sent,
+            Accountant.Config.ShowUnassignedInHeader, Accountant.Config.ShowUnderwayInHeader,
+            retainers ? (string)StringId.Retainers.Value() : null, machines ? (string)StringId.Machines.Value() : null);
+        if (key == _headerKey)
+            return;
+
+        _headerKey = key;
+        if (retainers)
+            _headerString = machines
+                ? $"{r.GetHeader(StringId.Retainers)}    {m.GetHeader(StringId.Machines)}###Accountant.Timers"
+                : $"{r.GetHeader(StringId.Retainers)}###Accountant.Timers";
+        else
+            _headerString = $"{m.GetHeader(StringId.Machines)}###Accountant.Timers";
     }
 
     private void DrawCompanyWarning()
@@ -184,13 +253,13 @@ public partial class TimerWindow : IDisposable
             return;
 
         using var c = ImGuiRaii.PushColor(ImGuiCol.Header, _demolitionWarning.HeaderColor.Value());
-        ImGui.CollapsingHeader("No Full Free Company Data", ImGuiTreeNodeFlags.DefaultOpen);
+        ImGui.CollapsingHeader(Loc.T("No Full Free Company Data"), ImGuiTreeNodeFlags.DefaultOpen);
         if (ImGui.IsItemHovered())
         {
             using var tt = ImRaii.Tooltip();
-            ImGui.TextWrapped("No full data about your current free company available.\n\n"
+            ImGui.TextWrapped(Loc.T("No full data about your current free company available.\n\n"
               + "Please leave your current instance or relog onto your character if this does not help to obtain Free Company Data after a Accountant Update.\n\n"
-              + "You can disable this warning permanently in the settings.");
+              + "You can disable this warning permanently in the settings."));
         }
     }
 
@@ -200,7 +269,7 @@ public partial class TimerWindow : IDisposable
             return;
 
         using var c = ImGuiRaii.PushColor(ImGuiCol.Header, _demolitionWarning.HeaderColor.Value());
-        if (!ImGui.CollapsingHeader("Demolishing Houses", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader(Loc.T("Demolishing Houses"), ImGuiTreeNodeFlags.DefaultOpen))
             return;
 
         foreach (var warning in _demolitionWarning.Warnings)
@@ -216,8 +285,33 @@ public partial class TimerWindow : IDisposable
         }
     }
 
+    // 每個計時器每一幀都格式化一次，結果只由時、分、秒與位數決定，所以記住；各執行緒各一份。
+    // 有負值時（負號跟著文化走）不進快取、照原式算。
+    [ThreadStatic]
+    private static Dictionary<long, string>? _timeSpanStrings;
+
     internal static string TimeSpanString(TimeSpan span, int align = 2)
-        => $"{((int)span.TotalHours).ToString(align == 2 ? "D2" : "D3")}:{span.Minutes:D2}:{span.Seconds:D2}";
+    {
+        var hours   = (int)span.TotalHours;
+        var minutes = span.Minutes;
+        var seconds = span.Seconds;
+        if (hours < 0 || minutes < 0 || seconds < 0)
+            return FormatTimeSpan(hours, minutes, seconds, align);
+
+        var key   = ((long)hours << 13) | ((long)minutes << 7) | ((long)seconds << 1) | (align == 2 ? 1L : 0L);
+        var cache = _timeSpanStrings ??= new Dictionary<long, string>();
+        if (cache.TryGetValue(key, out var s))
+            return s;
+
+        if (cache.Count >= 4096)
+            cache.Clear();
+        s          = FormatTimeSpan(hours, minutes, seconds, align);
+        cache[key] = s;
+        return s;
+    }
+
+    private static string FormatTimeSpan(int hours, int minutes, int seconds, int align)
+        => $"{hours.ToString(align == 2 ? "D2" : "D3")}:{minutes:D2}:{seconds:D2}";
 
     private string? StatusString(ObjectStatus status)
         => status switch
@@ -225,7 +319,7 @@ public partial class TimerWindow : IDisposable
             ObjectStatus.Available => _availableString,
             ObjectStatus.Completed => _completedString,
             ObjectStatus.Sent      => null,
-            ObjectStatus.Limited   => "Limited",
+            ObjectStatus.Limited   => Loc.T("Limited"),
             _                      => throw new ArgumentOutOfRangeException(nameof(status), status, null),
         };
 }

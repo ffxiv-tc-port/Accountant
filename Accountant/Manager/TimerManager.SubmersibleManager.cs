@@ -29,6 +29,8 @@ public partial class TimerManager
         public SubmersibleManager(SubmersibleTimers submersibles, AirshipTimers airships, FreeCompanyStorage companyStorage)
         {
             Dalamud.Interop.InitializeFromAttributes(this);
+            NoteMissing(_submersibleTimersHook,     "潛水艇計時資料（SubmersibleTimers）：潛水艇計時器可能不更新");
+            NoteMissing(_submersibleStatusListHook, "潛水艇狀態清單（SubmersibleStatus）：潛水艇計時器可能不更新");
             _submersibles   = submersibles;
             _airships       = airships;
             _companyStorage = companyStorage;
@@ -37,7 +39,7 @@ public partial class TimerManager
         }
 
         public TimerWindow.BaseCache CreateCache(TimerWindow window)
-            => new TimerWindow.MachineCache(window, RequiredFlags, "Submersibles", MachineType.Submersible, _airships, _submersibles);
+            => new TimerWindow.MachineCache(window, RequiredFlags, Loc.T("Submersibles"), MachineType.Submersible, _airships, _submersibles);
 
         public void SetState()
         {
@@ -52,9 +54,12 @@ public partial class TimerManager
             if (_state)
                 return;
 
-            _submersibleTimersHook?.Enable();
-            _submersibleStatusListHook?.Enable();
             _submersibles.Reload();
+            WhenStarted(() =>
+            {
+                _submersibleTimersHook?.Enable();
+                _submersibleStatusListHook?.Enable();
+            });
             _state = true;
         }
 
@@ -63,8 +68,11 @@ public partial class TimerManager
             if (!_state)
                 return;
 
-            _submersibleTimersHook?.Disable();
-            _submersibleStatusListHook?.Disable();
+            WhenStarted(() =>
+            {
+                _submersibleTimersHook?.Disable();
+                _submersibleStatusListHook?.Disable();
+            });
             _state = false;
         }
 
@@ -122,7 +130,7 @@ public partial class TimerManager
             finally
 
             {
-                _submersibleTimersHook!.Original(manager, data);
+                _submersibleTimersHook!.OriginalDisposeSafe(manager, data);
             }
         }
 
@@ -150,7 +158,7 @@ public partial class TimerManager
             }
             finally
             {
-                _submersibleStatusListHook!.Original(manager, data);
+                _submersibleStatusListHook!.OriginalDisposeSafe(manager, data);
             }
         }
     }

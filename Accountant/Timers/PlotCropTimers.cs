@@ -98,4 +98,36 @@ public sealed class PlotCropTimers : TimersBase<PlotInfo, PlantInfo[]>
 
     public void FertilizeCrop(CropSpotIdentification id, uint itemId, DateTime fertilizeTime)
         => UpdateAndSave(id, itemId, null, null, fertilizeTime);
+
+    // "Already fully fertilized" failure - not a real fertilize event, but confirms the crop is
+    // currently up to date, so fill in a missing fertilize timestamp with this moment.
+    public void MarkAlreadyFertilized(CropSpotIdentification id, DateTime now)
+    {
+        if (id.Type == CropSpotType.House)
+        {
+            var (info, data)  = FindPlotCrops(id);
+            var outdoorPlants = (ushort)(data.Length & ~0b111);
+            for (var i = (ushort)(data.Length - 1); i >= outdoorPlants; --i)
+            {
+                if (!data[i].CloseEnough(id.Position))
+                    continue;
+
+                data[i].MarkFertilizedIfUnset(now);
+                Invoke();
+                Save(info, data);
+                return;
+            }
+        }
+        else if (id.Type == CropSpotType.Outdoors)
+        {
+            var (info, data) = FindPlotCrops(id);
+            var idx          = (id.Patch << 3) + id.Bed;
+            if (idx >= data.Length)
+                return;
+
+            data[idx].MarkFertilizedIfUnset(now);
+            Invoke();
+            Save(info, data);
+        }
+    }
 }

@@ -28,6 +28,8 @@ public partial class TimerManager
         public AirshipManager(AirshipTimers airships, SubmersibleTimers submersibles, FreeCompanyStorage companyStorage)
         {
             Dalamud.Interop.InitializeFromAttributes(this);
+            NoteMissing(_airshipTimersHook,     "飛空艇計時資料（AirshipTimers）：飛空艇計時器可能不更新");
+            NoteMissing(_airshipStatusListHook, "飛空艇狀態清單（AirshipStatus）：飛空艇計時器可能不更新");
             _airships       = airships;
             _submersibles   = submersibles;
             _companyStorage = companyStorage;
@@ -35,7 +37,7 @@ public partial class TimerManager
         }
 
         public TimerWindow.BaseCache CreateCache(TimerWindow window)
-            => new TimerWindow.MachineCache(window, RequiredFlags, "Airships", MachineType.Airship, _airships, _submersibles);
+            => new TimerWindow.MachineCache(window, RequiredFlags, Loc.T("Airships"), MachineType.Airship, _airships, _submersibles);
 
         public void SetState()
         {
@@ -50,9 +52,12 @@ public partial class TimerManager
             if (_state)
                 return;
 
-            _airshipTimersHook?.Enable();
-            _airshipStatusListHook?.Enable();
             _airships.Reload();
+            WhenStarted(() =>
+            {
+                _airshipTimersHook?.Enable();
+                _airshipStatusListHook?.Enable();
+            });
             _state = true;
         }
 
@@ -61,8 +66,11 @@ public partial class TimerManager
             if (!_state)
                 return;
 
-            _airshipTimersHook?.Disable();
-            _airshipStatusListHook?.Disable();
+            WhenStarted(() =>
+            {
+                _airshipTimersHook?.Disable();
+                _airshipStatusListHook?.Disable();
+            });
             _state = false;
         }
 
@@ -117,7 +125,7 @@ public partial class TimerManager
             }
             finally
             {
-                _airshipTimersHook!.Original(manager, data);
+                _airshipTimersHook!.OriginalDisposeSafe(manager, data);
             }
         }
 
@@ -145,7 +153,7 @@ public partial class TimerManager
             }
             finally
             {
-                _airshipStatusListHook!.Original(manager, data);
+                _airshipStatusListHook!.OriginalDisposeSafe(manager, data);
             }
         }
     }

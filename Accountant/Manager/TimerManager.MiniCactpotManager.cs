@@ -48,9 +48,12 @@ public partial class TimerManager
             if (_state)
                 return;
 
-            _goldSaucerUpdateHook?.Enable();
-            _watcher.SubscribeYesnoSelected(TicketBought);
             _tasks.Reload();
+            WhenStarted(() =>
+            {
+                _goldSaucerUpdateHook?.Enable();
+                _watcher.SubscribeYesnoSelected(TicketBought);
+            });
             _state = true;
         }
 
@@ -59,8 +62,11 @@ public partial class TimerManager
             if (!_state)
                 return;
 
-            _goldSaucerUpdateHook?.Disable();
-            _watcher.UnsubscribeYesnoSelected(TicketBought);
+            WhenStarted(() =>
+            {
+                _goldSaucerUpdateHook?.Disable();
+                _watcher.UnsubscribeYesnoSelected(TicketBought);
+            });
             _state = false;
         }
 
@@ -78,10 +84,10 @@ public partial class TimerManager
                 LastUpdate = DateTime.UtcNow,
             };
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
             if (_tasks.AddOrUpdateMiniCactpot(player, mini))
                 _tasks.Save(player);
-            _goldSaucerUpdateHook!.Original(_, packet);
+            _goldSaucerUpdateHook!.OriginalDisposeSafe(_, packet);
         }
 
         private void TicketBought(IntPtr _, bool which, SeString button, SeString description)
@@ -92,7 +98,7 @@ public partial class TimerManager
             if (!StringId.BuyMiniCactpotTicket.Match(description))
                 return;
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer!);
+            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
             if (_tasks.AddOrUpdateMini(player))
                 _tasks.Save(player);
         }

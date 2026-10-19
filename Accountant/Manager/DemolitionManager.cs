@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Accountant.Classes;
 using Accountant.Enums;
+using Accountant.Util;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -44,7 +45,7 @@ public class DemolitionManager : IDisposable
     public PlotInfo CurrentPlot
         => new(Interop.PositionInfo.Zone, Interop.PositionInfo.Ward,
             InsideHouse(_clientState.TerritoryType) ? Interop.PositionInfo.House : Interop.PositionInfo.Plot,
-            (ushort)(_clientState.LocalPlayer?.CurrentWorld.RowId ?? 0));
+            (ushort)(Dalamud.PlayerState.IsLoaded ? Dalamud.PlayerState.CurrentWorld.RowId : 0));
 
     public DemolitionManager(AccountantConfiguration config, IDalamudPluginInterface pluginInterface, IClientState clientState,
         IFramework framework, IObjectTable objects)
@@ -118,12 +119,95 @@ public class DemolitionManager : IDisposable
         Change?.Invoke();
     }
 
+    private readonly ReloadGate _reloadGate = new("the demolition tracking data");
+
+    // Same rationale as TimersBase.ReloadAsync(): used only by ConfigSync's periodic external-change check.
+    // The file I/O + JSON parsing (mirrors the file-parsing half of Load(), minus the config-merge tail
+    // which only applies to the startup load) happens on a background thread into a local dictionary;
+    // Data is only mutated on the framework thread afterwards so nothing reading it concurrently sees a
+    // torn state.
+    public void ReloadAsync(Action? onReloaded = null)
+    {
+        _reloadGate.Run(() =>
+        {
+            var loaded         = new Dictionary<PlotInfo, DemolitionInfo>();
+            var lastChangeTime = File.Exists(_filePath) ? File.GetLastWriteTimeUtc(_filePath) : DateTime.UtcNow;
+
+            // 讀檔或解析失敗時讓例外丟給 ReloadGate：保留記憶體裡原有的資料、時間戳不動，下一輪檢查再讀。
+            // 刻意不在這裡接住：接住就會發布一份殘缺的資料，之後任何一次存檔都會把原檔蓋掉。
+            if (File.Exists(_filePath))
+            {
+                var text = File.ReadAllText(_filePath);
+                var obj  = JObject.Parse(text);
+                foreach (var (key, token) in obj)
+                {
+                    if (!ulong.TryParse(key, out var keyValue))
+                    {
+                        Dalamud.Log.Warning($"Invalid key {key} in demolition manager. Skipped.");
+                        continue;
+                    }
+
+                    var plotInfo = PlotInfo.FromValue(keyValue);
+                    if (!plotInfo.Valid())
+                    {
+                        Dalamud.Log.Warning($"Invalid plot info {plotInfo} in demolition manager. Skipped.");
+                        continue;
+                    }
+
+                    if (token is not JObject demoObj)
+                    {
+                        Dalamud.Log.Warning($"Invalid data for {plotInfo} in demolition manager. Skipped.");
+                        continue;
+                    }
+
+                    var demo = new DemolitionInfo
+                    {
+                        DisplayFrom        = demoObj[nameof(DemolitionInfo.DisplayFrom)]?.ToObject<byte>() ?? DefaultDisplayFrom,
+                        DisplayWarningFrom = demoObj[nameof(DemolitionInfo.DisplayWarningFrom)]?.ToObject<byte>() ?? DefaultDisplayWarningFrom,
+                        Tracked            = demoObj[nameof(DemolitionInfo.Tracked)]?.ToObject<bool>() ?? true,
+                        Name               = demoObj[nameof(DemolitionInfo.Name)]?.ToObject<string>() ?? string.Empty,
+                    };
+                    demo.DisplayFrom        = Math.Clamp(demo.DisplayFrom,        (byte)0, DefaultDisplayMax);
+                    demo.DisplayWarningFrom = Math.Clamp(demo.DisplayWarningFrom, (byte)0, DefaultDisplayMax);
+
+                    if (demoObj[nameof(DemolitionInfo.LastVisit)]?.ToObject<long>() is not { } lastVisitTimeStamp)
+                    {
+                        Dalamud.Log.Warning($"No data for {plotInfo}'s last visit for demolition tracking. Set to warning time.");
+                        demo.LastVisit = DateTime.UtcNow.AddDays(demo.DisplayWarningFrom);
+                    }
+                    else
+                    {
+                        demo.LastVisit = DateTimeOffset.FromUnixTimeMilliseconds(lastVisitTimeStamp).DateTime;
+                    }
+
+                    if (demoObj[nameof(DemolitionInfo.CheckedPlayers)]?.ToObject<string[]>() is { } players)
+                        foreach (var player in players)
+                            demo.CheckedPlayers.Add(PlayerInfo.FromCastedName(player));
+
+                    if (!loaded.TryAdd(plotInfo, demo))
+                        Dalamud.Log.Warning($"Could not add {plotInfo} to demolition tracking.");
+                }
+            }
+
+            return (loaded, lastChangeTime);
+        }, result =>
+        {
+            Data.Clear();
+            foreach (var (plot, demo) in result.loaded)
+                Data[plot] = demo;
+
+            LastChangeTime = result.lastChangeTime;
+            Change?.Invoke();
+            onReloaded?.Invoke();
+        });
+    }
+
     internal void Test()
     {
         var plotInfo = new PlotInfo(InternalHousingZone.Mist, 1, 1, (ushort)Accountant.GameData.Worlds().First().Id);
         while (!CanAddPlot(plotInfo) && plotInfo.Valid())
             plotInfo = new PlotInfo(plotInfo.Zone, plotInfo.Ward, (ushort)(plotInfo.Plot + 1), plotInfo.ServerId);
-        var demo = new DemolitionInfo()
+        var demo = new DemolitionInfo
         {
             DisplayFrom        = 20,
             DisplayWarningFrom = 25,
@@ -251,35 +335,38 @@ public class DemolitionManager : IDisposable
     public static bool InsideHouse(ushort territory)
         => (HousingZone)territory switch
         {
-            HousingZone.CottageMist         => true,
-            HousingZone.CottageLavenderBeds => true,
-            HousingZone.CottageGoblet       => true,
-            HousingZone.CottageShirogane    => true,
-            HousingZone.CottageEmpyreum     => true,
-            HousingZone.CottageMinimalist   => true,
-            HousingZone.HouseMist           => true,
-            HousingZone.HouseLavenderBeds   => true,
-            HousingZone.HouseGoblet         => true,
-            HousingZone.HouseShirogane      => true,
-            HousingZone.HouseEmpyreum       => true,
-            HousingZone.HouseMinimalist     => true,
-            HousingZone.MansionMist         => true,
-            HousingZone.MansionLavenderBeds => true,
-            HousingZone.MansionGoblet       => true,
-            HousingZone.MansionShirogane    => true,
-            HousingZone.MansionEmpyreum     => true,
-            HousingZone.MansionMinimalist   => true,
-            _                               => false,
+            HousingZone.CottageMist           => true,
+            HousingZone.CottageLavenderBeds   => true,
+            HousingZone.CottageGoblet         => true,
+            HousingZone.CottageShirogane      => true,
+            HousingZone.CottageEmpyreum       => true,
+            HousingZone.CottageMinimalist     => true,
+            HousingZone.CottageDarkMinimalist => true,
+            HousingZone.HouseMist             => true,
+            HousingZone.HouseLavenderBeds     => true,
+            HousingZone.HouseGoblet           => true,
+            HousingZone.HouseShirogane        => true,
+            HousingZone.HouseEmpyreum         => true,
+            HousingZone.HouseMinimalist       => true,
+            HousingZone.HouseDarkMinimalist   => true,
+            HousingZone.MansionMist           => true,
+            HousingZone.MansionLavenderBeds   => true,
+            HousingZone.MansionGoblet         => true,
+            HousingZone.MansionShirogane      => true,
+            HousingZone.MansionEmpyreum       => true,
+            HousingZone.MansionMinimalist     => true,
+            HousingZone.MansionDarkMinimalist => true,
+            _                                 => false,
         };
 
 
     private void OnFramework(IFramework framework)
     {
-        if (_clientState.LocalPlayer is not { } player)
+        if (!Dalamud.PlayerState.IsLoaded)
             return;
 
         var plotInfo = new PlotInfo(Interop.PositionInfo.Zone, Interop.PositionInfo.Ward, Interop.PositionInfo.House,
-            (ushort)player.CurrentWorld.RowId);
+            (ushort)Dalamud.PlayerState.CurrentWorld.RowId);
         if (!Data.TryGetValue(plotInfo, out var demoInfo) || !demoInfo.Tracked)
             return;
 

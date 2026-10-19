@@ -210,6 +210,9 @@ public class AccountantConfiguration : IPluginConfiguration
     public bool ShowCropTooltip = true;
     public bool ShowDtr { get; set; } = true;
 
+    // 只追蹤 3 級乙太轉輪(1/2 級價值低、佔版面),台服使用者要求,預設開啟。
+    public bool OnlyGrade3Wheels { get; set; } = true;
+
     public bool ShowUnassignedInHeader { get; set; } = false;
     public bool ShowUnderwayInHeader   { get; set; } = true;
 

@@ -38,7 +38,7 @@ public partial class TimerManager
                 return;
 
             _tasks.Reload();
-            Dalamud.Framework.Update += OnFrameworkSquadron;
+            WhenStarted(() => Dalamud.Framework.Update += OnFrameworkSquadron);
             _state                   =  true;
         }
 
@@ -47,7 +47,7 @@ public partial class TimerManager
             if (!_state)
                 return;
 
-            Dalamud.Framework.Update -= OnFrameworkSquadron;
+            WhenStarted(() => Dalamud.Framework.Update -= OnFrameworkSquadron);
             _state                   =  false;
         }
 
@@ -55,11 +55,11 @@ public partial class TimerManager
             => Disable();
 
         public TimerWindow.BaseCache CreateCache(TimerWindow window)
-            => throw new NotImplementedException();
+            => new TimerWindow.SquadronCache(window, RequiredFlags, _tasks);
 
         private void UpdateSquadron()
         {
-            if (Dalamud.ClientState.LocalPlayer == null)
+            if (Dalamud.Objects.LocalPlayer is not { } p)
                 return;
 
             var missionId = Interop.SquadronContainer.MissionId;
@@ -75,7 +75,7 @@ public partial class TimerManager
                 NewRecruits = Interop.SquadronContainer.NewRecruits,
             };
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            var player = PlayerInfo.FromLocalPlayer(p);
 
             if (_tasks.AddOrUpdateSquadron(player, info))
                 _tasks.Save(player);

@@ -22,9 +22,9 @@ public class SeFunctionBase<T> where T : Delegate
     public SeFunctionBase(IPluginLog log, ISigScanner sigScanner, string signature, int offset = 0)
     {
         _log    = log;
-        Address = sigScanner.ScanText(signature);
-        if (Address != IntPtr.Zero)
-            Address += offset;
+        // 特徵碼對不上時 Address 留 0、不擲例外；Delegate／Invoke／CreateHook 都先判 0。
+        if (sigScanner.TryScanText(signature, out var address) && address != IntPtr.Zero)
+            Address = address + offset;
         var baseOffset = (ulong)Address.ToInt64() - (ulong)sigScanner.Module.BaseAddress.ToInt64();
         _log.Debug($"{GetType().Name} address 0x{Address.ToInt64():X16}, baseOffset 0x{baseOffset:X16}.");
     }

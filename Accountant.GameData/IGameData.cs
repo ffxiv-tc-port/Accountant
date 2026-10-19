@@ -11,8 +11,12 @@ namespace Accountant;
 
 public static class GameDataFactory
 {
-    public static IGameData Create(IPluginLog log, IGameGui gui, IClientState state, IFramework framework, IDataManager data)
-        => new GameData(log, gui, state, framework, data);
+    public static IGameData Create(IPluginLog log, IGameGui gui, IClientState state, IObjectTable objects, IFramework framework, IDataManager data)
+        => new GameData(log, gui, state, objects, framework, data);
+
+    // 公會名稱／會長要用的 CS 位址都解到了；false＝公會資訊一律讀不到。
+    public static bool FreeCompanyInfoAvailable
+        => FreeCompanyTracker.Available;
 }
 
 public interface IGameData : IDisposable

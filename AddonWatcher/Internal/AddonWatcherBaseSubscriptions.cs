@@ -8,7 +8,7 @@ internal partial class AddonWatcherBase
     public void SubscribeYesnoSelected(ReceiveSelectYesnoDelegate del)
     {
         YesnoSelected += del;
-        if (!SelectYesNoHook!.IsEnabled)
+        if (SelectYesNoHook is { IsEnabled: false })
             SelectYesNoHook.Enable();
     }
 
@@ -16,7 +16,7 @@ internal partial class AddonWatcherBase
     {
         YesnoSelected -= del;
         if (YesnoSelected == null)
-            SelectYesNoHook!.Disable();
+            SelectYesNoHook?.Disable();
     }
 
     public void SubscribeOnceYesnoSelected(ReceiveSelectYesnoDelegate del)
@@ -33,7 +33,7 @@ internal partial class AddonWatcherBase
     public void SubscribeStringSelected(ReceiveSelectStringDelegate del)
     {
         StringSelected += del;
-        if (!SelectStringHook!.IsEnabled)
+        if (SelectStringHook is { IsEnabled: false })
             SelectStringHook.Enable();
     }
 
@@ -41,7 +41,7 @@ internal partial class AddonWatcherBase
     {
         StringSelected -= del;
         if (StringSelected == null)
-            SelectStringHook!.Disable();
+            SelectStringHook?.Disable();
     }
 
     public void SubscribeOnceStringSelected(ReceiveSelectStringDelegate del)
@@ -59,7 +59,7 @@ internal partial class AddonWatcherBase
     public void SubscribeSelectStringSetup(SelectStringSetupDelegate del)
     {
         SelectStringSetup += del;
-        if (!SelectStringSetupHook!.IsEnabled)
+        if (SelectStringSetupHook is { IsEnabled: false })
             SelectStringSetupHook.Enable();
     }
 
@@ -67,7 +67,7 @@ internal partial class AddonWatcherBase
     {
         SelectStringSetup -= del;
         if (SelectStringSetup == null)
-            SelectStringSetupHook!.Disable();
+            SelectStringSetupHook?.Disable();
     }
 
     public void SubscribeOnceSelectStringSetup(SelectStringSetupDelegate del)
@@ -85,7 +85,7 @@ internal partial class AddonWatcherBase
     public void SubscribeSelectYesnoSetup(SelectYesnoSetupDelegate del)
     {
         SelectYesnoSetup += del;
-        if (!SelectYesnoSetupHook!.IsEnabled)
+        if (SelectYesnoSetupHook is { IsEnabled: false })
             SelectYesnoSetupHook.Enable();
     }
 
@@ -93,7 +93,7 @@ internal partial class AddonWatcherBase
     {
         SelectYesnoSetup -= del;
         if (SelectYesnoSetup == null)
-            SelectYesnoSetupHook!.Disable();
+            SelectYesnoSetupHook?.Disable();
     }
 
     public void SubscribeOnceSelectYesnoSetup(SelectYesnoSetupDelegate del)
@@ -111,7 +111,7 @@ internal partial class AddonWatcherBase
     public void SubscribeJournalResultSetup(JournalResultSetupDelegate del)
     {
         JournalResultSetup += del;
-        if (!JournalResultSetupHook!.IsEnabled)
+        if (JournalResultSetupHook is { IsEnabled: false })
             JournalResultSetupHook.Enable();
     }
 
@@ -119,7 +119,7 @@ internal partial class AddonWatcherBase
     {
         JournalResultSetup -= del;
         if (JournalResultSetup == null)
-            JournalResultSetupHook!.Disable();
+            JournalResultSetupHook?.Disable();
     }
 
     public void SubscribeOnceJournalResultSetup(JournalResultSetupDelegate del)
@@ -137,7 +137,7 @@ internal partial class AddonWatcherBase
     public void SubscribeLotteryWeeklyRewardListSetup(LotteryWeeklyRewardListSetupDelegate del)
     {
         LotteryWeeklyRewardListSetup += del;
-        if (!LotteryWeeklyRewardListSetupHook!.IsEnabled)
+        if (LotteryWeeklyRewardListSetupHook is { IsEnabled: false })
             LotteryWeeklyRewardListSetupHook.Enable();
     }
 
@@ -145,7 +145,7 @@ internal partial class AddonWatcherBase
     {
         LotteryWeeklyRewardListSetup -= del;
         if (LotteryWeeklyRewardListSetup == null)
-            LotteryWeeklyRewardListSetupHook!.Disable();
+            LotteryWeeklyRewardListSetupHook?.Disable();
     }
 
     public void SubscribeOnceLotteryWeeklyRewardListSetup(LotteryWeeklyRewardListSetupDelegate del)
@@ -163,7 +163,7 @@ internal partial class AddonWatcherBase
     public void SubscribeTalkUpdate(TalkUpdateDelegate del)
     {
         TalkUpdated += del;
-        if (!TalkUpdateHook!.IsEnabled)
+        if (TalkUpdateHook is { IsEnabled: false })
             TalkUpdateHook.Enable();
     }
 
@@ -171,7 +171,7 @@ internal partial class AddonWatcherBase
     {
         TalkUpdated -= del;
         if (TalkUpdated == null)
-            TalkUpdateHook!.Disable();
+            TalkUpdateHook?.Disable();
     }
 
     public void SubscribeOnceTalkUpdate(TalkUpdateDelegate del)

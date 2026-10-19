@@ -15,7 +15,7 @@ public partial class TimerWindow
         public           ObjectCounter  Counter;
 
         public RetainerCache(TimerWindow window, ConfigFlags requiredFlags, RetainerTimers retainers)
-            : base("Retainers", requiredFlags, window)
+            : base(Loc.T("Retainers"), requiredFlags, window)
         {
             _retainers         =  retainers;
             _retainers.Changed += Resetter;
@@ -71,6 +71,35 @@ public partial class TimerWindow
                     continue;
 
                 Headers.Add(p);
+            }
+
+            Color       = Counter.GetColorHeader();
+            DisplayTime = Counter.GetTime();
+        }
+
+        protected override bool HasSummary
+            => true;
+
+        // 計數器相加與角色排序無關；同一角色內照陣列順序 Add（與整份重建相同）。
+        protected override void UpdateSummaryInternal()
+        {
+            Counter = ObjectCounter.Create();
+            foreach (var (player, retainers) in _retainers.Data)
+            {
+                if (Accountant.Config.BlockedPlayersRetainers.Contains(player.CastedName))
+                    continue;
+
+                var local = ObjectCounter.Create();
+                foreach (var retainer in retainers)
+                {
+                    if (retainer.RetainerId == 0)
+                        continue;
+
+                    local.Add(retainer.Venture, Now, retainer.Available ? 10 : 0);
+                    UpdateNextChange(retainer.Venture);
+                }
+
+                Counter += local;
             }
 
             Color       = Counter.GetColorHeader();

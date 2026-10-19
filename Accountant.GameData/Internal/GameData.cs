@@ -79,16 +79,16 @@ internal class GameData : IGameData
             ? ret
             : throw new ArgumentOutOfRangeException($"{worldId} is not a valid world id.");
 
-    public GameData(IPluginLog log, IGameGui gui, IClientState state, IFramework framework, IDataManager data)
+    public GameData(IPluginLog log, IGameGui gui, IClientState state, IObjectTable objects, IFramework framework, IDataManager data)
     {
-        _fcTracker ??= new FreeCompanyTracker(log, gui, state, framework);
+        _fcTracker ??= new FreeCompanyTracker(log, state, objects, framework);
         _crops     ??= new Crops(log, data);
         _wheels    ??= new Wheels(data);
         _maps      ??= new Maps(data);
         _plots     ??= new Plots(data);
         SetupWorlds(data);
         ++_subscribers;
-        Localization.Initialize(data);
+        Localization.Initialize(log, data);
     }
 
     private static void SetupWorlds(IDataManager data)
@@ -135,7 +135,13 @@ internal class GameData : IGameData
         if (world.IsPublic)
             return true;
 
-        return char.IsUpper((char)world.Name.Data.Span[0]);
+        var firstByte = world.Name.Data.Span[0];
+        // Non-ASCII (multi-byte UTF-8) names are localized world names, e.g. TC's
+        // Chinese-named worlds, which are always real worlds despite IsPublic being false there.
+        if (firstByte >= 0x80)
+            return true;
+
+        return char.IsUpper((char)firstByte);
     }
 
     public void Dispose()

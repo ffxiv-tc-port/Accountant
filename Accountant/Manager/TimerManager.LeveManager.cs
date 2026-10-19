@@ -42,7 +42,7 @@ public partial class TimerManager
                 return;
 
             _tasks.Reload();
-            Dalamud.Framework.Update += OnFrameworkLeve;
+            WhenStarted(() => Dalamud.Framework.Update += OnFrameworkLeve);
             _state                   =  true;
         }
 
@@ -51,7 +51,7 @@ public partial class TimerManager
             if (!_state)
                 return;
 
-            Dalamud.Framework.Update -= OnFrameworkLeve;
+            WhenStarted(() => Dalamud.Framework.Update -= OnFrameworkLeve);
             _state                   =  false;
         }
 
@@ -60,7 +60,7 @@ public partial class TimerManager
 
         private unsafe void UpdateLeves()
         {
-            if (Dalamud.ClientState.LocalPlayer == null)
+            if (Dalamud.Objects.LocalPlayer is not { } p)
                 return;
 
             var questManager = QuestManager.Instance();
@@ -68,7 +68,7 @@ public partial class TimerManager
                 return;
 
             var leves = questManager->NumLeveAllowances;
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            var player = PlayerInfo.FromLocalPlayer(p);
 
             if (_tasks!.AddOrUpdateLeves(player, leves))
                 _tasks.Save(player);

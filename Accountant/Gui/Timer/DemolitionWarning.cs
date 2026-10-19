@@ -46,10 +46,10 @@ public class DemolitionWarning : IDisposable
 
         var status = days switch
         {
-            > DemolitionManager.DefaultDisplayMax   => "Demolished",
-            DemolitionManager.DefaultDisplayMax     => "<1 Day Remaining",
-            DemolitionManager.DefaultDisplayMax - 1 => "1 Day Remaining",
-            _                                       => $"{DemolitionManager.DefaultDisplayMax - days} Days Remaining",
+            > DemolitionManager.DefaultDisplayMax   => Loc.T("Demolished"),
+            DemolitionManager.DefaultDisplayMax     => Loc.T("<1 Day Remaining"),
+            DemolitionManager.DefaultDisplayMax - 1 => Loc.T("1 Day Remaining"),
+            _ => string.Format(Loc.T("{0} Days Remaining"), DemolitionManager.DefaultDisplayMax - days),
         };
         var color = days > DemolitionManager.DefaultDisplayMax
             ? ColorId.TextCropWithered

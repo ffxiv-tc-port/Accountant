@@ -1,5 +1,6 @@
 ﻿using System;
 using Dalamud.Game;
+using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
 namespace AddonWatcher.Internal;
@@ -16,9 +17,10 @@ internal class AddonWatcher : IAddonWatcher
 
     public bool Valid { get; private set; } = true;
 
-    public AddonWatcher(IPluginLog log, IGameGui gui, ISigScanner sigScanner, IGameInteropProvider interop)
+    public AddonWatcher(IPluginLog log, IGameGui gui, ISigScanner sigScanner, IGameInteropProvider interop,
+        IDalamudPluginInterface pluginInterface)
     {
-        _base ??= new AddonWatcherBase(log, gui, sigScanner, interop);
+        _base ??= new AddonWatcherBase(log, gui, sigScanner, interop, pluginInterface);
         ++_subscribers;
     }
 
@@ -39,6 +41,9 @@ internal class AddonWatcher : IAddonWatcher
 
     private AddonWatcherBase Base
         => Valid ? _base! : throw new InvalidOperationException("Accessing disposed AddonWatcher.");
+
+    public System.Collections.Generic.IReadOnlyList<string> MissingHooks
+        => Base.MissingHooks;
 
     public void SubscribeYesnoSelected(ReceiveSelectYesnoDelegate del)
         => Base.SubscribeYesnoSelected(del);

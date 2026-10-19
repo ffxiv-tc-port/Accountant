@@ -29,37 +29,7 @@ public sealed class StringParser : ILocFilter
     public IList<string> Filter(string s)
         => _func(s);
 
-    public static StringParser FromRange(ClientLanguage lang, Range en, Range fr, Range jp, Range de)
-    {
-        var range = lang switch
-        {
-            ClientLanguage.Japanese => jp,
-            ClientLanguage.English  => en,
-            ClientLanguage.German   => de,
-            ClientLanguage.French   => fr,
-            _                       => en,
-        };
-
-        IList<string> Func(string s)
-        {
-            var end = (uint)(range.End.IsFromEnd ? s.Length - range.End.Value : range.End.Value);
-            if (end >= (uint)s.Length)
-                return Array.Empty<string>();
-
-            var start = (uint)(range.Start.IsFromEnd ? s.Length - range.Start.Value : range.Start.Value);
-            if (start >= end)
-                return Array.Empty<string>();
-
-            return new[]
-            {
-                s.Substring((int)start, (int)end),
-            };
-        }
-
-        return new StringParser(Func);
-    }
-
-    public static StringParser FromRegex(ClientLanguage lang, Regex en, Regex fr, Regex jp, Regex de, params string[] captureNames)
+    public static StringParser FromRegex(ClientLanguage lang, Regex en, Regex fr, Regex jp, Regex de, Regex? zh, params string[] captureNames)
     {
         var regex = lang switch
         {
@@ -67,7 +37,10 @@ public sealed class StringParser : ILocFilter
             ClientLanguage.English  => en,
             ClientLanguage.German   => de,
             ClientLanguage.French   => fr,
-            _                       => en,
+            // TC(台服)客戶端在 Dalamud 13.0.0.16 之後回報 ClientLanguage 7(TraditionalChinese),
+            // 舊版回報 4(ChineseSimplified)。用數值比較是為了相容列舉沒有 7 這個名字的舊版 Dalamud。
+            (ClientLanguage)4 or (ClientLanguage)5 or (ClientLanguage)7 => zh ?? en,
+            _ => en,
         };
 
         IList<string> Func(string se)

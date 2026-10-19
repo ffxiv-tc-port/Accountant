@@ -1,49 +1,75 @@
 ﻿using System;
-using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Memory;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace Accountant.Internal;
 
+// 公會名稱／會長讀 CS 的 InfoProxyFreeCompany，每次讀都從 InfoModule 重查、不留指標；只在框架執行緒（含 hook detour）呼叫。
 internal class FreeCompanyTracker
 {
+    // 名稱空白時判「還沒讀到」或「沒有公會」用的 8 位元組；CS 沒有這一格。
+    private const int StateOffset = 0x48;
+
+    // 取 InfoProxyFreeCompany 這條路上 CS 要解的位址都在：缺一個就呼叫會擲例外（在 detour 裡＝遊戲結束），所以先判。
+    internal static unsafe bool Available
+        => Framework.StaticAddressPointers.ppInstance != null
+         && Framework.MemberFunctionPointers.GetUIModule != null
+         && InfoModule.MemberFunctionPointers.GetInfoProxyById != null;
+
     private readonly IClientState _state;
+    private readonly IObjectTable _objects;
     private readonly IFramework   _framework;
-    private readonly IntPtr       _fcStatePtr  = IntPtr.Zero;
-    private readonly IntPtr       _fcNamePtr   = IntPtr.Zero;
-    private readonly IntPtr       _fcLeaderPtr = IntPtr.Zero;
     private          string?      _freeCompanyName;
     private          string?      _freeCompanyLeader;
     private          string       _characterName  = string.Empty;
     private          string       _freeCompanyTag = string.Empty;
     private          uint         _serverId;
 
-    private unsafe SeString? GetFcInfo(IntPtr ptr)
+    private readonly ParsedText _nameText     = new();
+    private readonly ParsedText _tagText      = new();
+    private readonly ParsedText _fcNameText   = new();
+    private readonly ParsedText _fcLeaderText = new();
+
+    private static unsafe InfoProxyFreeCompany* Proxy()
+        => Available ? InfoProxyFreeCompany.Instance() : null;
+
+    private static unsafe string? GetFcInfo(InfoProxyFreeCompany* fc, ReadOnlySpan<byte> text, ParsedText cache)
     {
-        if (_fcStatePtr == IntPtr.Zero)
+        if (fc == null)
             return null;
 
-        if (*(byte*)ptr != 0)
-            return MemoryHelper.ReadSeStringNullTerminated(ptr);
-        if (*(ulong*)_fcStatePtr != 0)
+        if (text[0] != 0)
+            return cache.Get(text);
+        if (*(ulong*)((byte*)fc + StateOffset) != 0)
             return null;
 
-        return SeString.Empty;
+        return string.Empty;
     }
 
-    private SeString? GetFcName()
-        => GetFcInfo(_fcNamePtr);
-
-    private SeString? GetFcLeader()
-        => GetFcInfo(_fcLeaderPtr);
-
-    private void Update()
+    private unsafe string? GetFcName()
     {
-        if (_state is { IsLoggedIn: true, LocalPlayer: not null })
+        var fc = Proxy();
+        return GetFcInfo(fc, fc == null ? default : fc->Name, _fcNameText);
+    }
+
+    private unsafe string? GetFcLeader()
+    {
+        var fc = Proxy();
+        return GetFcInfo(fc, fc == null ? default : fc->Master, _fcLeaderText);
+    }
+
+    private unsafe void Update()
+    {
+        if (_state.IsLoggedIn && _objects.LocalPlayer is { Address: not 0 } localPlayer)
         {
-            var newName   = _state.LocalPlayer.Name.TextValue;
-            var newTag    = _state.LocalPlayer.CompanyTag.TextValue;
-            var newServer = _state.LocalPlayer.HomeWorld.RowId;
+            // 與 localPlayer.Name／CompanyTag／HomeWorld 讀的是同一個結構的同三個欄位；那三個屬性每讀一次就重新解析一次。
+            var chara     = (Character*)localPlayer.Address;
+            var newName   = _nameText.Get(((GameObject*)chara)->Name);
+            var newTag    = _tagText.Get(chara->FreeCompanyTag);
+            var newServer = (uint)chara->HomeWorld;
             if (_characterName != newName || _freeCompanyTag != newTag || newServer != _serverId)
             {
                 _freeCompanyName   = null;
@@ -54,8 +80,8 @@ internal class FreeCompanyTracker
             _freeCompanyTag = newTag;
             _serverId       = newServer;
 
-            var newCompany = GetFcName()?.TextValue;
-            var newLeader  = GetFcLeader()?.TextValue;
+            var newCompany = GetFcName();
+            var newLeader  = GetFcLeader();
             if (newCompany != null && (_freeCompanyName == null || newCompany.Length > 0))
                 _freeCompanyName = newCompany;
 
@@ -72,30 +98,13 @@ internal class FreeCompanyTracker
         }
     }
 
-    private static unsafe IntPtr GetDataPointer(IPluginLog log, IGameGui gui)
-    {
-        var uiModule = gui.GetUIModule();
-        var vf34     = (IntPtr*)(*(ulong*)uiModule + 8 * Offsets.FreeCompany.FreeCompanyModuleVfunc);
-        log.Verbose($"Obtained free company data module getter (VFunc 34 of uiModule) at 0x{(ulong)vf34:X16}.");
-        var module = ((delegate*<IntPtr, IntPtr>)*vf34)(uiModule);
-        log.Verbose($"Obtained free company data module at 0x{module:X16}.");
-        var data = *(IntPtr*)(module + Offsets.FreeCompany.DataOffset);
-        if (data == IntPtr.Zero)
-            log.Error("Could not obtain free company data.");
-        return data;
-    }
-
-    public FreeCompanyTracker(IPluginLog log, IGameGui gui, IClientState state, IFramework framework)
+    public FreeCompanyTracker(IPluginLog log, IClientState state, IObjectTable objects, IFramework framework)
     {
         _state     = state;
+        _objects   = objects;
         _framework = framework;
-        var fcData = GetDataPointer(log, gui);
-        if (fcData != IntPtr.Zero)
-        {
-            _fcStatePtr  = fcData + 0x48;
-            _fcNamePtr   = fcData + 0x7C;
-            _fcLeaderPtr = fcData + 0x93;
-        }
+        if (!Available)
+            log.Error("Could not obtain free company data: InfoProxyFreeCompany is not resolvable.");
 
         _state.Login  += LoginHandler;
         _state.Logout += LogoutHandler;
@@ -111,7 +120,7 @@ internal class FreeCompanyTracker
 
     private void UpdateAndRemove(IFramework _)
     {
-        if (_state.LocalPlayer == null)
+        if (_objects.LocalPlayer == null)
             return;
 
         Update();

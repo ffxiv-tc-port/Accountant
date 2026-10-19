@@ -14,7 +14,7 @@ public partial class TimerWindow
         private readonly WheelTimers _wheels;
 
         public WheelCache(TimerWindow window, ConfigFlags requiredFlags, WheelTimers wheels)
-            : base("Aetherial Wheels", requiredFlags, window)
+            : base(Loc.T("Aetherial Wheels"), requiredFlags, window)
         {
             _wheels         =  wheels;
             _wheels.Changed += Resetter;
@@ -32,7 +32,7 @@ public partial class TimerWindow
                 Icon          = item.Icon,
                 IconOffset    = 0f,
                 Color         = end < Now ? ColorId.TextObjectsHome : ColorId.NeutralText,
-                DisplayString = end < Now ? "Primed" : null,
+                DisplayString = end < Now ? Loc.T("Primed") : null,
             };
         }
 
@@ -48,6 +48,7 @@ public partial class TimerWindow
             };
             Objects.AddRange(wheels
                 .Where(w => w.ItemId != 0)
+                .Where(w => !Accountant.Config.OnlyGrade3Wheels || w.Grade >= 3)
                 .Select(w => GenerateWheel(w, ref local))
                 .OrderByDescending(r => Accountant.Config.GetPriority(r.Name)));
             newObject.ObjectsCount = Objects.Count - newObject.ObjectsBegin;

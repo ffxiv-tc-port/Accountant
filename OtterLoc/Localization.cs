@@ -48,13 +48,16 @@ public static class LocalizationDict<T> where T : Enum
     public static bool Register(T key, string s)
         => Register(key, new LocName(s));
 
-    public static bool RegisterName(T key, ClientLanguage lang, string en, string jp, string de, string fr)
+    public static bool RegisterName(T key, ClientLanguage lang, string en, string jp, string de, string fr, string? zh = null)
         => lang switch
         {
             ClientLanguage.Japanese => Register(key, jp),
             ClientLanguage.German   => Register(key, de),
             ClientLanguage.French   => Register(key, fr),
-            _                       => Register(key, en),
+            // TC(台服)客戶端在 Dalamud 13.0.0.16 之後回報 ClientLanguage 7(TraditionalChinese),
+            // 舊版回報 4(ChineseSimplified)。用數值比較是為了相容列舉沒有 7 這個名字的舊版 Dalamud。
+            (ClientLanguage)4 or (ClientLanguage)5 or (ClientLanguage)7 => Register(key, zh ?? en),
+            _ => Register(key, en),
         };
 
     public static bool RegisterName(T key, ClientLanguage lang, SeString se, int payloadEn, int payloadJp, int payloadDe, int payloadFr)

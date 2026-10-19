@@ -4,7 +4,7 @@ using System.Linq;
 using Accountant.Gui.Helper;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace Accountant.Gui.Config;
 
@@ -25,11 +25,11 @@ public partial class ConfigWindow
     }
 
     private static unsafe bool IsDropping(string name)
-        => ImGui.AcceptDragDropPayload(name).NativePtr != null;
+        => ImGui.AcceptDragDropPayload(name).Handle != null;
 
     private void DrawOrderNamesTab()
     {
-        if (!ImGui.BeginTabItem("Order##AccountantTabs"))
+        if (!ImGui.BeginTabItem($"{Loc.T("Order")}##AccountantTabs"))
             return;
 
         using var raii = ImGuiRaii.DeferredEnd(ImGui.EndTabItem);
@@ -46,9 +46,9 @@ public partial class ConfigWindow
 
         raii.Push(ImGui.EndTable);
 
-        ImGui.TableSetupColumn("##",       ImGuiTableColumnFlags.WidthFixed, ImGui.GetStyle().FrameBorderSize);
-        ImGui.TableSetupColumn("Priority", ImGuiTableColumnFlags.WidthFixed, 150 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Name",     ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("##",              ImGuiTableColumnFlags.WidthFixed, ImGui.GetStyle().FrameBorderSize);
+        ImGui.TableSetupColumn(Loc.T("Priority"), ImGuiTableColumnFlags.WidthFixed, 150 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Name"),     ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableHeadersRow();
         ImGui.TableSetupScrollFreeze(0, 1);
 
@@ -68,7 +68,7 @@ public partial class ConfigWindow
             font.Pop();
             ImGui.TableNextColumn();
             ImGui.SetNextItemWidth(-1);
-            if (ImGui.InputInt(string.Empty, ref priority, 0, 0, ImGuiInputTextFlags.EnterReturnsTrue) && priority != _priorityCache[i].Item1)
+            if (ImGui.InputInt(string.Empty, ref priority, 0, 0, flags: ImGuiInputTextFlags.EnterReturnsTrue) && priority != _priorityCache[i].Item1)
             {
                 change      = i;
                 newPriority = priority;
@@ -79,7 +79,7 @@ public partial class ConfigWindow
 
             if (ImGui.BeginDragDropSource())
             {
-                ImGui.SetDragDropPayload("Priority", IntPtr.Zero, 0);
+                ImGui.SetDragDropPayload("Priority", [], ImGuiCond.None);
                 _dragDropSource = i;
                 ImGui.EndDragDropSource();
             }
@@ -141,6 +141,6 @@ public partial class ConfigWindow
         ImGui.InputInt("##newPriority", ref _newPriority, 0, 0);
         ImGui.TableNextColumn();
         ImGui.SetNextItemWidth(-1);
-        ImGui.InputTextWithHint("##name", "New Priority Name...", ref _newPriorityName, 48);
+        ImGui.InputTextWithHint("##name", Loc.T("New Priority Name..."), ref _newPriorityName, 48);
     }
 }

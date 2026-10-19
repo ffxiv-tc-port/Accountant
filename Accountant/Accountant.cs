@@ -23,17 +23,19 @@ public class Accountant : IDalamudPlugin
     public readonly  TimerWindow             TimerWindow;
     public readonly  ConfigWindow            ConfigWindow;
     private readonly ConfigSync              _configSync;
+    private readonly MissingNoticeEcho       _missingEcho;
 
 
     public Accountant(IDalamudPluginInterface pluginInterface)
     {
         Dalamud.Initialize(pluginInterface);
+        Loc.Load(Dalamud.ClientState.ClientLanguage);
         Interop.Init(Dalamud.Log, Dalamud.SigScanner);
         Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
         Config  = AccountantConfiguration.Load();
 
-        Watcher      = AddonWatcherFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.SigScanner, Dalamud.Interop);
-        GameData     = GameDataFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.ClientState, Dalamud.Framework, Dalamud.GameData);
+        Watcher      = AddonWatcherFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.SigScanner, Dalamud.Interop, pluginInterface);
+        GameData     = GameDataFactory.Create(Dalamud.Log, Dalamud.GameGui, Dalamud.ClientState, Dalamud.Objects, Dalamud.Framework, Dalamud.GameData);
         Timers       = new TimerManager();
         DemoManager  = new DemolitionManager(Config, pluginInterface, Dalamud.ClientState, Dalamud.Framework, Dalamud.Objects);
         TimerWindow  = new TimerWindow(Timers, DemoManager, Timers.CompanyStorage);
@@ -41,16 +43,18 @@ public class Accountant : IDalamudPlugin
 
         Dalamud.Commands.AddHandler("/accountant", new CommandInfo(OnAccountant)
         {
-            HelpMessage = "Open Accountant config. Use '/acct' or '/accountant timers' to toggle the timer window.",
+            HelpMessage = Loc.T("Open Accountant config. Use '/acct' or '/accountant timers' to toggle the timer window."),
             ShowInHelp  = true,
         });
 
         Dalamud.Commands.AddHandler("/acct", new CommandInfo(OnAcct)
         {
-            HelpMessage = "Toggle the timer window.",
+            HelpMessage = Loc.T("Toggle the timer window."),
             ShowInHelp  = true,
         });
+        Timers.Start();
         _configSync = new ConfigSync(Timers, TimerWindow, DemoManager);
+        _missingEcho = new MissingNoticeEcho([.. Interop.MissingNotices, .. Watcher.MissingHooks, .. TimerManager.MissingHooks]);
     }
 
     private void OnAccountant(string command, string arguments)
@@ -70,6 +74,7 @@ public class Accountant : IDalamudPlugin
 
     public void Dispose()
     {
+        _missingEcho.Dispose();
         _configSync.Dispose();
         DemoManager.Dispose();
         Timers.Dispose();

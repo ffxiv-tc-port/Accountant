@@ -23,6 +23,7 @@ public class Dalamud
         [PluginService] public static IDataManager            GameData        { get; private set; } = null!;
         [PluginService] public static IObjectTable            Objects         { get; private set; } = null!;
         [PluginService] public static IClientState            ClientState     { get; private set; } = null!;
+        [PluginService] public static IPlayerState           PlayerState     { get; private set; } = null!;
         [PluginService] public static IChatGui                Chat            { get; private set; } = null!;
         [PluginService] public static IFramework              Framework       { get; private set; } = null!;
         [PluginService] public static ICondition              Conditions      { get; private set; } = null!;
@@ -43,7 +44,10 @@ public class Dalamud
             return false;
         }
 
-        var tex = Textures.GetFromGameIcon(new GameIconLookup(iconId));
+        // 找得到圖示時兩者回同一個共用材質，但 GetFromGameIcon 每次呼叫都配置一個取路徑的委派；
+        // 找不到時照舊走 GetFromGameIcon（它會擲 IconNotFoundException），行為不變。
+        if (!Textures.TryGetFromGameIcon(new GameIconLookup(iconId), out var tex))
+            tex = Textures.GetFromGameIcon(new GameIconLookup(iconId));
         return tex.TryGetWrap(out icon, out _);
     }
 }

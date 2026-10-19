@@ -42,7 +42,12 @@ public partial class TimerWindow
                 Icon          = _icon,
                 IconOffset    = 0.125f,
                 DisplayString = Window.StatusString(type),
-                Color         = type == ObjectStatus.Limited ? ColorId.DisabledText : ColorId.NeutralText,
+                Color = type switch
+                {
+                    ObjectStatus.Limited   => ColorId.DisabledText,
+                    ObjectStatus.Completed => ColorId.TextObjectsHome,
+                    _                      => ColorId.NeutralText,
+                },
             };
         }
 
@@ -117,6 +122,60 @@ public partial class TimerWindow
                 var machine = GenerateCompany(name, company, data, ref GlobalCounter);
                 if (machine.ObjectsCount > 0)
                     Headers.Add(machine);
+            }
+
+            Color       = GlobalCounter.GetColorHeader();
+            DisplayTime = GlobalCounter.GetTime();
+        }
+
+        protected override bool HasSummary
+            => true;
+
+        // GenerateCompany 去掉 Objects／Headers 的部分；Add 與 UpdateNextChange 的順序與它相同。
+        protected override void UpdateSummaryInternal()
+        {
+            GlobalCounter = ObjectCounter.Create();
+            var airshipType = _type == MachineType.Airship;
+            foreach (var (company, data) in airshipType ? _airships.Data : _submersibles.Data)
+            {
+                if (airshipType
+                        ? Accountant.Config.BlockedCompaniesAirships.Contains(company.CastedName)
+                        : Accountant.Config.BlockedCompaniesSubmersibles.Contains(company.CastedName))
+                    continue;
+
+                var localMain = ObjectCounter.Create();
+                foreach (var machine in data)
+                {
+                    if (machine.Type == MachineType.Unknown)
+                        continue;
+
+                    localMain.Add(machine.Arrival, Now, MachineInfo.MaxSlots);
+                    UpdateNextChange(machine.Arrival);
+                }
+
+                var localOff = ObjectCounter.Create();
+                switch (_type)
+                {
+                    case MachineType.Submersible when Accountant.Config.Flags.Check(ConfigFlags.Airships)
+                     && _airships.Data.TryGetValue(company, out var airships):
+                    {
+                        foreach (var airship in airships)
+                            localOff.Add(UpdateNextChange(airship.Arrival), Now, MachineInfo.MaxSlots);
+                        break;
+                    }
+                    case MachineType.Airship when Accountant.Config.Flags.Check(ConfigFlags.Submersibles)
+                     && _submersibles.Data.TryGetValue(company, out var submersibles):
+                    {
+                        foreach (var submersible in submersibles)
+                            localOff.Add(UpdateNextChange(submersible.Arrival), Now, MachineInfo.MaxSlots);
+                        break;
+                    }
+                }
+
+                if ((localMain + localOff).VerifyLimit(MachineInfo.MaxSlots))
+                    localMain.VerifyLimit(0);
+
+                GlobalCounter += localMain;
             }
 
             Color       = GlobalCounter.GetColorHeader();

@@ -36,24 +36,23 @@ public static class Offsets
         public const int TrainingId  = 0x0A;
         public const int NewRecruits = 0x0C;
     }
-
-    public static class FreeCompany
-    {
-        public const int FreeCompanyModuleVfunc = 34;
-        public const int DataOffset             = 0x19E0;
-    }
 }
 
 public static class Signatures
 {
     public const string GoldSaucerData = "48 89 5C 24 ?? 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B 0D ?? ?? ?? ?? 48 8B FA";
     public const string SquadronContainer = "8B 3D ?? ?? ?? ?? 8B D8 3B F8";
-    public const string PositionInfo = "48 8B 05 ?? ?? ?? ?? 0F 83";
 
 
-    public const string AirshipTimers = "48 89 5C 24 ?? 57 48 83 EC 20 48 8B D9 48 8B FA 48 8B 49 40";
+    // 台服:上游的短特徵碼(結尾停在 "48 8B 49 40")在台服執行檔有 2 個命中,ScanText 取位址最低的那個,
+    // 而那是一個零呼叫的死函式 —— AirshipTimersDetour 掛得上去卻永遠不會觸發,飛空艇歸還時間靜默永不更新。
+    // 所以把特徵碼延長到 "48 85 C9 74 ?? BA 90 00 00 00"(mov edx, 0x90 = 4 × Airship.TimerSize)才唯一;
+    // je 的位移用 ?? 遮罩,不寫死。
+    public const string AirshipTimers = "48 89 5C 24 ?? 57 48 83 EC 20 48 8B D9 48 8B FA 48 8B 49 40 48 85 C9 74 ?? BA 90 00 00 00";
     public const string AirshipStatus = "48 89 5C 24 ?? 48 89 6C 24 ?? 56 57 41 54 41 56 41 57 48 83 EC ?? 48 8D B1";
 
-    public const string SubmersibleTimers = "48 89 5C 24 ?? 57 48 83 EC 20 48 8B D9 48 8B FA 48 8B 49 48";
+    // 同上:短特徵碼在台服也是 2 命中,第一命中碰巧就是正解,但那是運氣不是設計 ——
+    // 只要台服改版讓那個無關函式排到前面,潛水艇歸還時間就會靜默失效,所以一併延長到 mov edx, 0x90。
+    public const string SubmersibleTimers = "48 89 5C 24 ?? 57 48 83 EC 20 48 8B D9 48 8B FA 48 8B 49 48 48 85 C9 74 ?? BA 90 00 00 00";
     public const string SubmersibleStatus = "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 0F 10 02 4C 8D 81";
 }

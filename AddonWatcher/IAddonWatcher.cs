@@ -1,6 +1,7 @@
 ﻿using System;
 using Dalamud.Game;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
 namespace AddonWatcher;
@@ -15,14 +16,18 @@ public delegate void TalkUpdateDelegate(IntPtr unit, SeString text, SeString spe
 
 public static class AddonWatcherFactory
 {
-    public static IAddonWatcher Create(IPluginLog log, IGameGui gui, ISigScanner sigScanner, IGameInteropProvider provider)
-        => new Internal.AddonWatcher(log, gui, sigScanner, provider);
+    public static IAddonWatcher Create(IPluginLog log, IGameGui gui, ISigScanner sigScanner, IGameInteropProvider provider,
+        IDalamudPluginInterface pluginInterface)
+        => new Internal.AddonWatcher(log, gui, sigScanner, provider, pluginInterface);
 }
 
 public interface IAddonWatcher : IDisposable
 {
     public int  Version { get; }
     public bool Valid   { get; }
+
+    /// <summary>遊戲改版後特徵碼對不上而停用的偵測項目（說明文字）；全部正常時是空的。</summary>
+    public System.Collections.Generic.IReadOnlyList<string> MissingHooks { get; }
 
     public void SubscribeYesnoSelected(ReceiveSelectYesnoDelegate del);
     public void SubscribeStringSelected(ReceiveSelectStringDelegate del);

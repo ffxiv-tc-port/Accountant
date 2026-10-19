@@ -4,7 +4,7 @@ using Accountant.Classes;
 using Accountant.Enums;
 using Accountant.Gui.Helper;
 using Dalamud.Interface.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace Accountant.Gui.Config;
 
@@ -90,9 +90,9 @@ public partial class ConfigWindow
         using var _ = ImGuiRaii.PushId(id);
 
         var newPlot = PlotInfo.FromValue(plotInfo);
-        if (newPlot.ServerId == 0 && Dalamud.ClientState.LocalPlayer != null)
+        if (newPlot.ServerId is 0 && Dalamud.PlayerState.IsLoaded)
         {
-            newPlot  = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.ClientState.LocalPlayer.CurrentWorld.RowId);
+            newPlot  = new PlotInfo(newPlot.Zone, newPlot.Ward, newPlot.Plot, (ushort)Dalamud.PlayerState.CurrentWorld.RowId);
             plotInfo = newPlot.Value;
         }
 
@@ -118,11 +118,24 @@ public partial class ConfigWindow
         ImGui.TextUnformatted(plot.Plot.ToString("D2"));
     }
 
+    private static void DrawPlotRow(PlotInfo plot, Manager.DemolitionManager.DemolitionInfo data)
+    {
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(data.Name);
+        DrawPlotRow(plot);
+    }
+
     private static void SetupPlotHeaders()
     {
-        ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Zone",  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 125 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Ward",  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
-        ImGui.TableSetupColumn("Plot",  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("World"), ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 70 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Zone"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 100 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Ward"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn(Loc.T("Plot"),  ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 35 * ImGuiHelpers.GlobalScale);
+    }
+
+    private static void SetupPlotHeadersWithName()
+    {
+        ImGui.TableSetupColumn(Loc.T("Custom Name"), ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoClip, 70 * ImGuiHelpers.GlobalScale);
+        SetupPlotHeaders();
     }
 }

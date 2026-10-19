@@ -80,4 +80,28 @@ public sealed class PrivateCropTimers : TimersBase<PlayerInfo, PlantInfo[]>
 
     public void FertilizeCrop(CropSpotIdentification id, uint itemId, DateTime fertilizeTime)
         => UpdateAndSave(id, itemId, null, null, fertilizeTime);
+
+    // "Already fully fertilized" failure - not a real fertilize event, but confirms the crop is
+    // currently up to date, so fill in a missing fertilize timestamp with this moment.
+    public void MarkAlreadyFertilized(CropSpotIdentification id, DateTime now)
+    {
+        if (id.Type is not (CropSpotType.Apartment or CropSpotType.Chambers))
+            return;
+
+        var (info, data) = FindPrivateCrops(id);
+        var idx = id.Type switch
+        {
+            CropSpotType.Apartment when data[0].CloseEnough(id.Position) => 0,
+            CropSpotType.Apartment when data[1].CloseEnough(id.Position) => 1,
+            CropSpotType.Chambers when data[2].CloseEnough(id.Position)  => 2,
+            CropSpotType.Chambers when data[3].CloseEnough(id.Position)  => 3,
+            _                                                            => -1,
+        };
+        if (idx < 0)
+            return;
+
+        data[idx].MarkFertilizedIfUnset(now);
+        Invoke();
+        Save(info, data);
+    }
 }

@@ -43,7 +43,7 @@ public partial class TimerManager
                 return;
 
             _tasks.Reload();
-            Dalamud.Framework.Update += OnFrameworkTribe;
+            WhenStarted(() => Dalamud.Framework.Update += OnFrameworkTribe);
             _state                   =  true;
         }
 
@@ -52,7 +52,7 @@ public partial class TimerManager
             if (!_state)
                 return;
 
-            Dalamud.Framework.Update -= OnFrameworkTribe;
+            WhenStarted(() => Dalamud.Framework.Update -= OnFrameworkTribe);
             _state                   =  false;
         }
 
@@ -61,14 +61,14 @@ public partial class TimerManager
 
         private unsafe void UpdateTribes()
         {
-            if (Dalamud.ClientState.LocalPlayer == null)
+            if (Dalamud.Objects.LocalPlayer is not { } p)
                 return;
 
             var allowances = (int) QuestManager.Instance()->GetBeastTribeAllowance();
             if (allowances is < 0 or > Tribe.AllowanceCap)
                 return;
 
-            var player = new PlayerInfo(Dalamud.ClientState.LocalPlayer);
+            var player = PlayerInfo.FromLocalPlayer(p);
 
             if (_tasks!.AddOrUpdateTribes(player, allowances))
                 _tasks.Save(player);
