@@ -4,6 +4,7 @@ using Accountant.Enums;
 using Accountant.Gui.Timer;
 using Accountant.SeFunctions;
 using Accountant.Timers;
+using Accountant.Util;
 using AddonWatcher;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
@@ -21,6 +22,9 @@ public partial class TimerManager
         private readonly TaskTimers _tasks;
 
         private          bool                            _state;
+
+        private const string Feature = "仙人仙彩紀錄";
+        private int _detourFailed;
         private readonly IAddonWatcher                   _watcher;
         private readonly Hook<UpdateGoldSaucerDelegate>? _goldSaucerUpdateHook;
 
@@ -85,32 +89,46 @@ public partial class TimerManager
                 _tasks.Save(player);
         }
 
+        // 遊戲原函式只在 finally 呼叫，恰好一次；插件邏輯的例外不可穿回原生框架（＝遊戲崩潰）。
         private unsafe void UpdateGoldSaucerDetour(IntPtr _, IntPtr packet)
         {
-            var jumbo = new JumboCactpot()
+            try
             {
-                LastUpdate = DateTime.UtcNow,
-            };
+                if (Dalamud.Objects.LocalPlayer is not { } localPlayer)
+                    return;
 
-            var statePtr = (byte*)(packet + 0x1E);
-            var ptr      = (ushort*)(packet + 0x22);
-            var tickets  = jumbo.Tickets;
-            for (var i = 0; i < JumboCactpot.MaxTickets; ++i)
-            {
-                if (statePtr[i] >= 3 || statePtr[i] == 0)
-                    continue;
-                var ticket = ptr[i];
-                if (ticket >= 10000)
-                    ticket = 0xFFFF;
-                tickets[i] = ticket;
+                var jumbo = new JumboCactpot()
+                {
+                    LastUpdate = DateTime.UtcNow,
+                };
+
+                var statePtr = (byte*)(packet + 0x1E);
+                var ptr      = (ushort*)(packet + 0x22);
+                var tickets  = jumbo.Tickets;
+                for (var i = 0; i < JumboCactpot.MaxTickets; ++i)
+                {
+                    if (statePtr[i] >= 3 || statePtr[i] == 0)
+                        continue;
+                    var ticket = ptr[i];
+                    if (ticket >= 10000)
+                        ticket = 0xFFFF;
+                    tickets[i] = ticket;
+                }
+
+                var player = new PlayerInfo(localPlayer);
+                if (statePtr[0] == 2)
+                    jumbo.LastUpdate = jumbo.NextReset(player.ServerId).AddDays(-7);
+                if (_tasks.AddOrUpdateJumboCactpot(player, jumbo))
+                    _tasks.Save(player);
             }
-
-            var player = new PlayerInfo(Dalamud.Objects.LocalPlayer!);
-            if (statePtr[0] == 2)
-                jumbo.LastUpdate = jumbo.NextReset(player.ServerId).AddDays(-7);
-            if (_tasks.AddOrUpdateJumboCactpot(player, jumbo))
-                _tasks.Save(player);
-            _goldSaucerUpdateHook!.OriginalDisposeSafe(_, packet);
+            catch (Exception ex)
+            {
+                DetourGuard.ReportOnce(ref _detourFailed, Feature, ex);
+            }
+            finally
+            {
+                _goldSaucerUpdateHook!.OriginalDisposeSafe(_, packet);
+            }
         }
 
         private void TicketBought(IntPtr _, bool which, SeString button, SeString description)
