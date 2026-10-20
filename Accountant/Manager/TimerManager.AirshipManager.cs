@@ -22,6 +22,9 @@ public partial class TimerManager
 
         private bool _state;
 
+        private const string Feature = "飛空艇計時";
+        private int _detourFailed;
+
         private readonly AirshipTimers     _airships;
         private readonly SubmersibleTimers _submersibles;
 
@@ -123,6 +126,10 @@ public partial class TimerManager
                 if (changes)
                     _airships.Save(info!.Value);
             }
+            catch (Exception ex)
+            {
+                DetourGuard.ReportOnce(ref _detourFailed, Feature, ex);
+            }
             finally
             {
                 _airshipTimersHook!.OriginalDisposeSafe(manager, data);
@@ -150,6 +157,10 @@ public partial class TimerManager
 
                 if (changes)
                     _airships.Save(info!.Value);
+            }
+            catch (Exception ex)
+            {
+                DetourGuard.ReportOnce(ref _detourFailed, Feature, ex);
             }
             finally
             {
