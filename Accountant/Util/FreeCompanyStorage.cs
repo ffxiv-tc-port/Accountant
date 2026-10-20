@@ -157,12 +157,16 @@ public class FreeCompanyStorage
         return Infos[idx];
     }
 
+    // 公會名稱還沒讀到時，計時視窗每幀都走到這裡：同伺服器、標籤相同（有會長時會長也相同）的第一筆，沒有回 null。
     private FreeCompanyInfo? FindByTagAndLeader(string tag, string l, ushort serverId)
     {
-        var infos = Infos.Where(i => i.ServerId == serverId);
-        return l.Length > 0
-            ? infos.Cast<FreeCompanyInfo?>().FirstOrDefault(i => i!.Value.Tag == tag && i.Value.Leader == l)
-            : infos.Cast<FreeCompanyInfo?>().FirstOrDefault(i => i!.Value.Tag == tag);
+        foreach (var info in Infos)
+        {
+            if (info.ServerId == serverId && info.Tag == tag && (l.Length == 0 || info.Leader == l))
+                return info;
+        }
+
+        return null;
     }
 
     public void Reload()
