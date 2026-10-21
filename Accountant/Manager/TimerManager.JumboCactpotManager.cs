@@ -94,6 +94,9 @@ public partial class TimerManager
         {
             try
             {
+                if (DetourGuard.IsPaused(ref _detourFailed))
+                    return;
+
                 if (Dalamud.Objects.LocalPlayer is not { } localPlayer)
                     return;
 

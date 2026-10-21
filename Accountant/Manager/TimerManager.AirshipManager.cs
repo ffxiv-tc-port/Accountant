@@ -109,6 +109,9 @@ public partial class TimerManager
         {
             try
             {
+                if (DetourGuard.IsPaused(ref _detourFailed))
+                    return;
+
                 FreeCompanyInfo? info    = null;
                 var              changes = false;
                 var              timer   = (AirshipTimer*)data;
@@ -140,6 +143,9 @@ public partial class TimerManager
         {
             try
             {
+                if (DetourGuard.IsPaused(ref _detourFailed))
+                    return;
+
                 FreeCompanyInfo? info    = null;
                 var              changes = false;
                 var              status  = (AirshipStatus*)data;

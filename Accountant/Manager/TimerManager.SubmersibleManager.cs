@@ -111,6 +111,9 @@ public partial class TimerManager
         {
             try
             {
+                if (DetourGuard.IsPaused(ref _detourFailed))
+                    return;
+
                 FreeCompanyInfo? info    = null;
                 var              changes = false;
                 var              timer   = (SubmersibleTimer*)data;
@@ -145,6 +148,9 @@ public partial class TimerManager
         {
             try
             {
+                if (DetourGuard.IsPaused(ref _detourFailed))
+                    return;
+
                 FreeCompanyInfo? info    = null;
                 var              changes = false;
                 var              status  = (SubmersibleStatus*)data;
