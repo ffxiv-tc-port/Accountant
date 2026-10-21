@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using AddonWatcher.Enums;
 using AddonWatcher.Structs;
@@ -27,39 +28,67 @@ internal partial class AddonWatcherBase
     private void SelectYesnoOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
         SelectYesnoSetupHook!.OriginalDisposeSafe(unit, _, data);
-        var description = AtkValueText(data, _, 0);
-        var yes         = AtkValueText(data, _, 1);
-        var no          = AtkValueText(data, _, 2);
-        _log.Verbose("SelectYesno 0x{SelectYesnoPtr:X} setup with description {Description} and options {YesOption}/{NoOption}.",
-            (ulong)unit, description, yes, no);
-        SelectYesnoSetup?.Invoke(unit, description, yes, no);
+        try
+        {
+            var description = AtkValueText(data, _, 0);
+            var yes         = AtkValueText(data, _, 1);
+            var no          = AtkValueText(data, _, 2);
+            _log.Verbose("SelectYesno 0x{SelectYesnoPtr:X} setup with description {Description} and options {YesOption}/{NoOption}.",
+                (ulong)unit, description, yes, no);
+            SelectYesnoSetup?.Invoke(unit, description, yes, no);
+        }
+        catch (Exception e)
+        {
+            LogDispatchFailureOnce("SelectYesnoSetup", e);
+        }
     }
 
     private void SelectStringOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
         SelectStringSetupHook!.OriginalDisposeSafe(unit, _, data);
-        var ptr         = (SelectStringInfo)unit;
-        var description = ptr.Description;
-        var options     = Enumerable.Range(0, ptr.Count).Select(i => ptr.ItemText(i)).ToArray();
-        _log.Verbose("SelectString 0x{SelectStringPtr:X} setup with description {Description} and {OptionCount} options.", (ulong)unit,
-            description, options.Length);
-        SelectStringSetup?.Invoke(unit, description, options);
+        try
+        {
+            var ptr         = (SelectStringInfo)unit;
+            var description = ptr.Description;
+            var options     = Enumerable.Range(0, ptr.Count).Select(i => ptr.ItemText(i)).ToArray();
+            _log.Verbose("SelectString 0x{SelectStringPtr:X} setup with description {Description} and {OptionCount} options.", (ulong)unit,
+                description, options.Length);
+            SelectStringSetup?.Invoke(unit, description, options);
+        }
+        catch (Exception e)
+        {
+            LogDispatchFailureOnce("SelectStringSetup", e);
+        }
     }
 
     private void JournalResultOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
         JournalResultSetupHook!.OriginalDisposeSafe(unit, _, data);
-        var ptr       = (JournalResultInfo)unit;
-        var questName = ptr.QuestName;
-        _log.Verbose("JournalResult 0x{JournalResultPtr:X} setup for quest {QuestName}.", (ulong)unit, questName);
-        JournalResultSetup?.Invoke(unit, questName);
+        try
+        {
+            var ptr       = (JournalResultInfo)unit;
+            var questName = ptr.QuestName;
+            _log.Verbose("JournalResult 0x{JournalResultPtr:X} setup for quest {QuestName}.", (ulong)unit, questName);
+            JournalResultSetup?.Invoke(unit, questName);
+        }
+        catch (Exception e)
+        {
+            LogDispatchFailureOnce("JournalResultSetup", e);
+        }
     }
 
     private void LotteryWeeklyRewardListOnSetupDetour(IntPtr unit, int _, IntPtr data)
     {
         LotteryWeeklyRewardListSetupHook!.OriginalDisposeSafe(unit, _, data);
-        _log.Verbose("LotteryWeeklyRewardList 0x{LotteryWeeklyRewardListPtr:X} setup.", (ulong)unit);
-        LotteryWeeklyRewardListSetup?.Invoke(unit);
+        try
+        {
+            _log.Verbose("LotteryWeeklyRewardList 0x{LotteryWeeklyRewardListPtr:X} setup.", (ulong)unit);
+            LotteryWeeklyRewardListSetup?.Invoke(unit);
+        }
+        catch (Exception e)
+        {
+            LogDispatchFailureOnce("LotteryWeeklyRewardListSetup", e);
+        }
     }
 
     private void SelectYesNoEventDetour(IntPtr atkUnit, EventType eventType, int which, IntPtr source, IntPtr data)
@@ -99,9 +128,10 @@ internal partial class AddonWatcherBase
         InvokeDeferred(deferred, "SelectYesno");
     }
 
-    private bool _deferredFailureLogged;
+    // 只在遊戲主執行緒（hook 回呼）存取，不加鎖。
+    private readonly HashSet<string> _dispatchFailureLogged = [];
 
-    // 跑在遊戲主執行緒的 hook 回呼裡：訂閱者的例外穿回原生碼＝遊戲結束，所以在這裡攔下、只記一次。
+    // 跑在遊戲主執行緒的 hook 回呼裡：訂閱者的例外穿回原生碼＝遊戲結束，所以在這裡攔下、每種只記一次。
     private void InvokeDeferred(Action? deferred, string source)
     {
         if (deferred == null)
@@ -113,11 +143,14 @@ internal partial class AddonWatcherBase
         }
         catch (Exception e)
         {
-            if (_deferredFailureLogged)
-                return;
-            _deferredFailureLogged = true;
-            _log.Error(e, "{Source} selection callback threw; ignored (logged once per session).", source);
+            LogDispatchFailureOnce(source, e);
         }
+    }
+
+    private void LogDispatchFailureOnce(string source, Exception e)
+    {
+        if (_dispatchFailureLogged.Add(source))
+            _log.Error(e, "{Source} event dispatch threw; ignored (logged once per session for this kind).", source);
     }
 
     private static readonly ByteString SelectStringName = new("SelectString");
@@ -130,7 +163,7 @@ internal partial class AddonWatcherBase
         {
             var owner = ((PopupMenu*)atkUnit)->Owner;
             var idx = (byte)((AtkEventData*)data)->ListItemData.SelectedIndex;
-            if (SelectStringName.EqualsNullTerminated(owner->Name) && ShouldReport((IntPtr)owner, idx))
+            if (owner != null && SelectStringName.EqualsNullTerminated(owner->Name) && ShouldReport((IntPtr)owner, idx))
             {
                 var ptr              = (IntPtr)owner;
                 var selectStringInfo = (SelectStringInfo) ptr;
@@ -153,10 +186,17 @@ internal partial class AddonWatcherBase
     private void TalkUpdateDetour(IntPtr unit, IntPtr data)
     {
         TalkUpdateHook!.OriginalDisposeSafe(unit, data);
-        var ptr     = (TalkInfo)unit;
-        var speaker = ptr.Speaker;
-        var text    = ptr.Text;
-        _log.Verbose("Talk at 0x{Unit:X} updated - Speaker: {Speaker}\n{Text}", (ulong)unit, speaker, text);
-        TalkUpdated?.Invoke(unit, text, speaker);
+        try
+        {
+            var ptr     = (TalkInfo)unit;
+            var speaker = ptr.Speaker;
+            var text    = ptr.Text;
+            _log.Verbose("Talk at 0x{Unit:X} updated - Speaker: {Speaker}\n{Text}", (ulong)unit, speaker, text);
+            TalkUpdated?.Invoke(unit, text, speaker);
+        }
+        catch (Exception e)
+        {
+            LogDispatchFailureOnce("TalkUpdated", e);
+        }
     }
 }
