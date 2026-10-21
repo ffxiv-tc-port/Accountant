@@ -96,7 +96,28 @@ internal partial class AddonWatcherBase
         }
 
         SelectYesNoHook!.OriginalDisposeSafe(atkUnit, eventType, which, source, data);
-        deferred?.Invoke();
+        InvokeDeferred(deferred, "SelectYesno");
+    }
+
+    private bool _deferredFailureLogged;
+
+    // 跑在遊戲主執行緒的 hook 回呼裡：訂閱者的例外穿回原生碼＝遊戲結束，所以在這裡攔下、只記一次。
+    private void InvokeDeferred(Action? deferred, string source)
+    {
+        if (deferred == null)
+            return;
+
+        try
+        {
+            deferred();
+        }
+        catch (Exception e)
+        {
+            if (_deferredFailureLogged)
+                return;
+            _deferredFailureLogged = true;
+            _log.Error(e, "{Source} selection callback threw; ignored (logged once per session).", source);
+        }
     }
 
     private static readonly ByteString SelectStringName = new("SelectString");
@@ -125,7 +146,7 @@ internal partial class AddonWatcherBase
         }
 
         SelectStringHook!.OriginalDisposeSafe(atkUnit, eventType, which, source, data);
-        deferred?.Invoke();
+        InvokeDeferred(deferred, "SelectString");
     }
 
 

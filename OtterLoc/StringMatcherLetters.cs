@@ -21,7 +21,7 @@ public sealed class StringMatcherLetters : ILocMatcher
         var homeIdx = 0;
         foreach (var c in s.Where(char.IsLetter))
         {
-            if (c != Name[homeIdx++])
+            if (homeIdx >= Name.Length || c != Name[homeIdx++])
                 return false;
         }
 
