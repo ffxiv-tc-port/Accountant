@@ -97,7 +97,7 @@ jobs:
             if ($c -gt 0) { $bad++; Write-Host "::error::leak guard hit: $([IO.Path]::GetFileName($f)) real=$c" }
           }
           if ($bad -gt 0) { throw "leak guard blocked $bad file(s)" }
-          Write-Host "leak guard clean: $($files.Count) file(s), needle length $($n.Length)"
+          Write-Host "leak guard clean: $($files.Count) file(s)"
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
