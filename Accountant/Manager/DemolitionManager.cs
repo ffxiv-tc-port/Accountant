@@ -8,6 +8,7 @@ using Accountant.Util;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Task = System.Threading.Tasks.Task;
@@ -102,7 +103,7 @@ public class DemolitionManager : IDisposable
             }
 
             var text = JsonConvert.SerializeObject(obj, Formatting.Indented);
-            File.WriteAllText(_filePath, text);
+            FilesystemUtil.WriteAllTextSafe(_filePath, text);
             LastChangeTime = File.GetLastWriteTimeUtc(_filePath);
             Change?.Invoke();
         }
@@ -131,6 +132,7 @@ public class DemolitionManager : IDisposable
         _reloadGate.Run(() =>
         {
             var loaded         = new Dictionary<PlotInfo, DemolitionInfo>();
+            var skipped        = 0;
             var lastChangeTime = File.Exists(_filePath) ? File.GetLastWriteTimeUtc(_filePath) : DateTime.UtcNow;
 
             // 讀檔或解析失敗時讓例外丟給 ReloadGate：保留記憶體裡原有的資料、時間戳不動，下一輪檢查再讀。
@@ -144,6 +146,7 @@ public class DemolitionManager : IDisposable
                     if (!ulong.TryParse(key, out var keyValue))
                     {
                         Dalamud.Log.Warning($"Invalid key {key} in demolition manager. Skipped.");
+                        ++skipped;
                         continue;
                     }
 
@@ -151,12 +154,14 @@ public class DemolitionManager : IDisposable
                     if (!plotInfo.Valid())
                     {
                         Dalamud.Log.Warning($"Invalid plot info {plotInfo} in demolition manager. Skipped.");
+                        ++skipped;
                         continue;
                     }
 
                     if (token is not JObject demoObj)
                     {
                         Dalamud.Log.Warning($"Invalid data for {plotInfo} in demolition manager. Skipped.");
+                        ++skipped;
                         continue;
                     }
 
@@ -185,8 +190,14 @@ public class DemolitionManager : IDisposable
                             demo.CheckedPlayers.Add(PlayerInfo.FromCastedName(player));
 
                     if (!loaded.TryAdd(plotInfo, demo))
+                    {
                         Dalamud.Log.Warning($"Could not add {plotInfo} to demolition tracking.");
+                        ++skipped;
+                    }
                 }
+
+                if (skipped > 0)
+                    BackupUnreadable($"重新讀取時有 {skipped} 筆房屋資料讀不懂而略過");
             }
 
             return (loaded, lastChangeTime);
@@ -236,6 +247,7 @@ public class DemolitionManager : IDisposable
             return;
         }
 
+        var skipped = 0;
         try
         {
             LastChangeTime = File.GetLastWriteTimeUtc(_filePath);
@@ -246,6 +258,7 @@ public class DemolitionManager : IDisposable
                 if (!ulong.TryParse(key, out var keyValue))
                 {
                     Dalamud.Log.Warning($"Invalid key {key} in demolition manager. Skipped.");
+                    ++skipped;
                     continue;
                 }
 
@@ -253,12 +266,14 @@ public class DemolitionManager : IDisposable
                 if (!plotInfo.Valid())
                 {
                     Dalamud.Log.Warning($"Invalid plot info {plotInfo} in demolition manager. Skipped.");
+                    ++skipped;
                     continue;
                 }
 
                 if (token is not JObject demoObj)
                 {
                     Dalamud.Log.Warning($"Invalid data for {plotInfo} in demolition manager. Skipped.");
+                    ++skipped;
                     continue;
                 }
 
@@ -287,12 +302,19 @@ public class DemolitionManager : IDisposable
                         demo.CheckedPlayers.Add(PlayerInfo.FromCastedName(player));
 
                 if (!Data.TryAdd(plotInfo, demo))
+                {
                     Dalamud.Log.Warning($"Could not add {plotInfo} to demolition tracking.");
+                    ++skipped;
+                }
             }
+
+            if (skipped > 0)
+                BackupUnreadable($"有 {skipped} 筆房屋資料讀不懂而略過");
         }
         catch (Exception ex)
         {
             Dalamud.Log.Error($"Unknown error loading demolition manager:\n{ex}");
+            BackupUnreadable($"讀取失敗（{ex.GetType().Name}），這次只用失敗前讀到的 {Data.Count} 筆");
         }
 
         if (config == null)
@@ -316,6 +338,12 @@ public class DemolitionManager : IDisposable
             config.Save();
         }
     }
+
+    // 讀壞時選「先備份再用讀到的部分」：之後新增／編輯房屋或造訪房屋都會整份覆寫原檔。
+    private void BackupUnreadable(string reason)
+        => ConfigFileSafety.BackupUnreadable(_filePath, reason,
+            "之後新增／編輯房屋或造訪房屋時，會用目前的資料整份覆寫 demolitiontracking.json。",
+            m => Dalamud.Log.Information("{Message:l}", m));
 
     private void OnTerritoryChange(ushort territory)
     {
