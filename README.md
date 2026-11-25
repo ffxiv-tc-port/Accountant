@@ -29,8 +29,24 @@
 - 介面繁體中文化，作物與乙太轉輪的偵測改用台服的資料。
 - 選用 AutoRetainer：沒派探險的僱員改向 AutoRetainer 讀資料。
 - 遊戲改版後特徵碼對不上時不再整個插件載入失敗。
-- 公會資料與房屋拆除追蹤的檔案一時讀不進來時，不再清空已記錄的資料。
+- 飛空艇／潛水艇計時、仙人微彩、仙人仙彩與各種視窗的監看出錯時，改成略過並暫停該項記錄，遊戲照常運作，不再可能讓遊戲結束。
+- 公會資料與房屋拆除追蹤的檔案一時讀不進來時，不再清空已記錄的資料；房屋拆除倒數的資料檔讀不懂時先留一份備份。
 - 伺服器資訊列左右鍵統一：左鍵計時視窗、右鍵設定視窗。
 - 多處降低記憶體用量。
 
+## 安裝
+
+1. 在遊戲內輸入 `/xlsettings` 開啟「Dalamud 設定」，到「試驗性功能」分頁的「第三方插件倉庫」加入
+   `https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/repo.json`
+   並啟用、儲存。
+2. 輸入 `/xlplugins` 開啟「插件管理員」，搜尋「Accountant」安裝。
+
+同一個插件只裝這裡的版本，不要同時裝上游版。
+
+## 需要搭配的插件
+
+- 選用：[AutoRetainer](https://github.com/ffxiv-tc-port/AutoRetainer)（沒派探險的僱員資料）
+
 原作者：[Ottermandias](https://github.com/Ottermandias/Accountant)
+
+授權：Apache-2.0（見 LICENSE）
